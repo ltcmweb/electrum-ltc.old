@@ -3383,30 +3383,42 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
     def derive_pubkeys(self, c, i):
         return [self.keystore.derive_pubkey(c, i).hex()]
 
+    def derive_address(self, for_change: int, n: int) -> str:
+        if self.txin_type != 'mweb':
+            return Deterministic_Wallet.derive_address(self, for_change, n)
+        if for_change == 1:
+            n = 0
+        else:
+            n += 1
+        scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+        spend_pubkey, _ = self.keystore.get_keypair([0x80000001], None)
+        channel = grpc.insecure_channel('localhost:1234')
+        stub = mwebd_pb2_grpc.RpcStub(channel)
+        resp = stub.Addresses(mwebd_pb2.AddressRequest(
+            from_index=n, to_index=n+1,
+            scan_secret=scan_secret, spend_pubkey=spend_pubkey))
+        return resp.address[0]
 
+    def start_network(self, network):
+        Deterministic_Wallet.start_network(self, network)
+        if self.txin_type == 'mweb':
+            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+            asyncio.run_coroutine_threadsafe(self.subscribe_mweb_utxos(scan_secret),
+                                             self.network.asyncio_loop)
+
+    async def subscribe_mweb_utxos(self, scan_secret):
+        channel = grpc.aio.insecure_channel('localhost:1234')
+        stub = mwebd_pb2_grpc.RpcStub(channel)
+        call = stub.Utxos(mwebd_pb2.UtxosRequest(scan_secret=scan_secret))
+        while True:
+            utxo = await call.read()
+            print(utxo)
 
 
 
 
 class Standard_Wallet(Simple_Deterministic_Wallet):
     wallet_type = 'standard'
-
-    def derive_address(self, for_change: int, n: int) -> str:
-        if self.txin_type == 'mweb':
-            if for_change == 1:
-                n = 0
-            else:
-                n += 1
-            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
-            spend_pubkey, _ = self.keystore.get_keypair([0x80000001], None)
-            channel = grpc.insecure_channel('localhost:1234')
-            stub = mwebd_pb2_grpc.RpcStub(channel)
-            resp = stub.Addresses(mwebd_pb2.AddressRequest(
-                from_index=n, to_index=n+1,
-                scan_secret=scan_secret, spend_pubkey=spend_pubkey))
-            return resp.address[0]
-        else:
-            return Simple_Deterministic_Wallet.derive_address(self, for_change, n)
 
     def pubkeys_to_address(self, pubkeys):
         pubkey = pubkeys[0]
