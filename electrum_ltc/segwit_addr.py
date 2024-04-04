@@ -91,7 +91,7 @@ def bech32_decode(bech: str, *, ignore_long_length=False) -> DecodedBech32:
     if bech_lower != bech and bech.upper() != bech:
         return DecodedBech32(None, None, None)
     pos = bech.rfind('1')
-    if pos < 1 or pos + 7 > len(bech) or (not ignore_long_length and len(bech) > 90):
+    if pos < 1 or pos + 7 > len(bech) or (not ignore_long_length and len(bech) > 130):
         return DecodedBech32(None, None, None)
     # check that HRP only consists of sane ASCII chars
     if any(ord(x) < 33 or ord(x) > 126 for x in bech[:pos+1]):
@@ -139,11 +139,11 @@ def decode_segwit_address(hrp: str, addr: Optional[str]) -> Tuple[Optional[int],
     if hrpgot != hrp:
         return (None, None)
     decoded = convertbits(data[1:], 5, 8, False)
-    if decoded is None or len(decoded) < 2 or len(decoded) > 40:
+    if decoded is None or len(decoded) < 2 or len(decoded) > 66:
         return (None, None)
     if data[0] > 16:
         return (None, None)
-    if data[0] == 0 and len(decoded) != 20 and len(decoded) != 32:
+    if data[0] == 0 and len(decoded) != 20 and len(decoded) != 32 and len(decoded) != 66:
         return (None, None)
     if (data[0] == 0 and encoding != Encoding.BECH32) or (data[0] != 0 and encoding != Encoding.BECH32M):
         return (None, None)

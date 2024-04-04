@@ -467,6 +467,11 @@ def address_to_script(addr: str, *, net=None) -> str:
         if not (0 <= witver <= 16):
             raise BitcoinException(f'impossible witness version: {witver}')
         return construct_script([witver, bytes(witprog)])
+    witver, witprog = segwit_addr.decode_segwit_address(net.MWEB_HRP, addr)
+    if witprog is not None:
+        if witver != 0:
+            raise BitcoinException(f'impossible witness version: {witver}')
+        return bytes(witprog).hex()
     addrtype, hash_160_ = b58_address_to_hash160(addr)
     if addrtype == net.ADDRTYPE_P2PKH:
         script = pubkeyhash_to_p2pkh_script(bh2u(hash_160_))
@@ -737,6 +742,14 @@ def is_segwit_address(addr: str, *, net=None) -> bool:
         return False
     return witprog is not None
 
+def is_mweb_address(addr: str, *, net=None) -> bool:
+    if net is None: net = constants.net
+    try:
+        witver, witprog = segwit_addr.decode_segwit_address(net.MWEB_HRP, addr)
+    except Exception as e:
+        return False
+    return witprog is not None
+
 def is_b58_address(addr: str, *, net=None) -> bool:
     if net is None: net = constants.net
     try:
@@ -751,6 +764,7 @@ def is_b58_address(addr: str, *, net=None) -> bool:
 def is_address(addr: str, *, net=None) -> bool:
     if net is None: net = constants.net
     return is_segwit_address(addr, net=net) \
+           or is_mweb_address(addr, net=net) \
            or is_b58_address(addr, net=net)
 
 

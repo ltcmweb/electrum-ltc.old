@@ -46,6 +46,7 @@ import itertools
 import threading
 import enum
 import asyncio
+import grpc
 
 from aiorpcx import timeout_after, TaskTimeout, ignore_after, run_in_thread
 
@@ -84,6 +85,8 @@ from .lnworker import LNWallet
 from .paymentrequest import PaymentRequest
 from .util import read_json_file, write_json_file, UserFacingException, FileImportFailed
 from .util import EventListener, event_listener
+from . import mwebd_pb2_grpc
+from . import mwebd_pb2
 
 if TYPE_CHECKING:
     from .network import Network
@@ -3387,6 +3390,23 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
 
 class Standard_Wallet(Simple_Deterministic_Wallet):
     wallet_type = 'standard'
+
+    def derive_address(self, for_change: int, n: int) -> str:
+        if self.txin_type == 'mweb':
+            if for_change == 1:
+                n = 0
+            else:
+                n += 1
+            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+            spend_pubkey, _ = self.keystore.get_keypair([0x80000001], None)
+            channel = grpc.insecure_channel('localhost:1234')
+            stub = mwebd_pb2_grpc.RpcStub(channel)
+            resp = stub.Addresses(mwebd_pb2.AddressRequest(
+                from_index=n, to_index=n+1,
+                scan_secret=scan_secret, spend_pubkey=spend_pubkey))
+            return resp.address[0]
+        else:
+            return Simple_Deterministic_Wallet.derive_address(self, for_change, n)
 
     def pubkeys_to_address(self, pubkeys):
         pubkey = pubkeys[0]

@@ -533,6 +533,10 @@ def get_script_type_from_output_script(_bytes: bytes) -> Optional[str]:
     return None
 
 def get_address_from_output_script(_bytes: bytes, *, net=None) -> Optional[str]:
+    if len(_bytes) == 66:
+        if net is None: net = constants.net
+        return segwit_addr.encode_segwit_address(net.MWEB_HRP, 0, _bytes)
+
     try:
         decoded = [x for x in script_GetOp(_bytes)]
     except MalformedBitcoinScript:

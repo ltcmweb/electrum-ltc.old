@@ -33,7 +33,7 @@ from aiorpcx import run_in_thread, RPCError
 from . import util
 from .transaction import Transaction, PartialTransaction
 from .util import bh2u, make_aiohttp_session, NetworkJobOnDefaultServer, random_shuffled_copy, OldTaskGroup
-from .bitcoin import address_to_scripthash, is_address
+from .bitcoin import address_to_scripthash, is_address, is_mweb_address
 from .logging import Logger
 from .interface import GracefulDisconnect, NetworkTimeout
 
@@ -91,7 +91,8 @@ class SynchronizerBase(NetworkJobOnDefaultServer):
         if not is_address(addr): raise ValueError(f"invalid bitcoin address {addr}")
         if addr in self.requested_addrs: return
         self.requested_addrs.add(addr)
-        self.add_queue.put_nowait(addr)
+        if not is_mweb_address(addr):
+            self.add_queue.put_nowait(addr)
 
     async def _on_address_status(self, addr, status):
         """Handle the change of the status of an address."""

@@ -437,6 +437,7 @@ class BaseWizard(Logger):
                 ('standard',    'legacy (p2pkh)',            bip44_derivation(0, bip43_purpose=44)),
                 ('p2wpkh-p2sh', 'p2sh-segwit (p2wpkh-p2sh)', bip44_derivation(0, bip43_purpose=49)),
                 ('p2wpkh',      'native segwit (p2wpkh)',    bip44_derivation(0, bip43_purpose=84)),
+                ('mweb',        'MWEB (mweb)',               bip44_derivation(0, bip43_purpose=1000)),
             ]
         while True:
             try:
@@ -574,7 +575,7 @@ class BaseWizard(Logger):
         if has_xpub:
             t1 = xpub_type(k.xpub)
         if self.wallet_type == 'standard':
-            if has_xpub and t1 not in ['standard', 'p2wpkh', 'p2wpkh-p2sh']:
+            if has_xpub and t1 not in ['standard', 'p2wpkh', 'p2wpkh-p2sh', 'mweb']:
                 self.show_error(_('Wrong key type') + ' %s'%t1)
                 self.run('choose_keystore')
                 return
