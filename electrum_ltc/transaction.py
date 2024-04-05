@@ -1603,6 +1603,7 @@ class PartialTxOutput(TxOutput, PSBTSection):
         self.pubkeys = []  # type: List[bytes]  # note: order matters
         self.is_mine = False  # type: bool  # whether the wallet considers the output to be ismine
         self.is_change = False  # type: bool  # whether the wallet considers the output to be change
+        self.mweb_output_id = ''
 
     def to_json(self):
         d = super().to_json()

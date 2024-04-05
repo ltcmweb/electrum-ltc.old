@@ -757,7 +757,9 @@ class AddressSynchronizer(Logger, EventListener):
                     v_in += value
             for txout in tx.outputs():
                 v_out += txout.value
-        if v_in is not None:
+        if v_in == 0:
+            fee = 0
+        elif v_in is not None:
             fee = v_in - v_out
         else:
             fee = None
