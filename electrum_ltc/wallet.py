@@ -3151,6 +3151,8 @@ class Deterministic_Wallet(Abstract_Wallet):
         self._ephemeral_addr_to_addr_index = {}  # type: Dict[str, Sequence[int]]
         Abstract_Wallet.__init__(self, db, storage, config=config)
         self.gap_limit = db.get('gap_limit', 20)
+        if self.txin_type == 'mweb':
+            self.gap_limit = 1000
         # generate addresses now. note that without libsecp this might block
         # for a few seconds!
         self.synchronize()
@@ -3363,6 +3365,7 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
     """ Deterministic Wallet with a single pubkey per address """
 
     def __init__(self, db, storage, *, config):
+        self._address_cache = {}
         Deterministic_Wallet.__init__(self, db, storage, config=config)
 
     def get_public_key(self, address):
@@ -3391,13 +3394,18 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
             n = 0
         else:
             n += 1
+        if n in self._address_cache:
+            return self._address_cache[n]
         scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
         spend_pubkey, _ = self.keystore.get_keypair([0x80000001], None)
         channel = grpc.insecure_channel('localhost:1234')
         stub = mwebd_pb2_grpc.RpcStub(channel)
         resp = stub.Addresses(mwebd_pb2.AddressRequest(
-            from_index=n, to_index=n+1,
+            from_index=n, to_index=n + (1 if for_change == 1 else 1000),
             scan_secret=scan_secret, spend_pubkey=spend_pubkey))
+        for address in resp.address:
+            self._address_cache[n] = address
+            n += 1
         return resp.address[0]
 
     def start_network(self, network):
@@ -3417,18 +3425,20 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
             tx._inputs = []
             tx._outputs = [TxOutput.from_address_and_value(utxo.address, utxo.value)]
             tx._outputs[0].mweb_output_id = utxo.output_id
-            if utxo.height == 0:
-                self.adb.add_unverified_or_unconfirmed_tx(utxo.output_id, utxo.height)
-            else:
-                async with self.network.bhi_lock:
-                    header = self.network.blockchain().read_header(utxo.height)
-                tx_info = TxMinedInfo(height=utxo.height,
-                                      timestamp=header.get('timestamp'),
-                                      txpos=0,
-                                      header_hash=hash_header(header))
-                self.adb.add_verified_tx(utxo.output_id, tx_info)
+            self.adb.add_unverified_or_unconfirmed_tx(utxo.output_id, utxo.height)
             self.adb.add_transaction(tx, allow_unrelated=True)
+            if utxo.height > 0:
+                await self.taskgroup.spawn(self._add_verified_utxo, utxo)
 
+    async def _add_verified_utxo(self, utxo):
+        await asyncio.sleep(0.1)
+        async with self.network.bhi_lock:
+            header = self.network.blockchain().read_header(utxo.height)
+        tx_info = TxMinedInfo(height=utxo.height,
+                              timestamp=header.get('timestamp'),
+                              txpos=0,
+                              header_hash=hash_header(header))
+        self.adb.add_verified_tx(utxo.output_id, tx_info)
 
 
 
