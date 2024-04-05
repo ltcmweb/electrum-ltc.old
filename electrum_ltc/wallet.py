@@ -72,6 +72,7 @@ from .wallet_db import WalletDB
 from . import transaction, bitcoin, coinchooser, paymentrequest, ecc, bip32
 from .transaction import (Transaction, TxInput, UnknownTxinType, TxOutput,
                           PartialTransaction, PartialTxInput, PartialTxOutput, TxOutpoint)
+from .blockchain import hash_header
 from .plugin import run_hook
 from .address_synchronizer import (AddressSynchronizer, TX_HEIGHT_LOCAL,
                                    TX_HEIGHT_UNCONF_PARENT, TX_HEIGHT_UNCONFIRMED, TX_HEIGHT_FUTURE)
@@ -3412,7 +3413,21 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
         call = stub.Utxos(mwebd_pb2.UtxosRequest(scan_secret=scan_secret))
         while True:
             utxo = await call.read()
-            print(utxo)
+            tx = Transaction(None)
+            tx._inputs = []
+            tx._outputs = [TxOutput.from_address_and_value(utxo.address, utxo.value)]
+            tx._outputs[0].mweb_output_id = utxo.output_id
+            if utxo.height == 0:
+                self.adb.add_unverified_or_unconfirmed_tx(utxo.output_id, utxo.height)
+            else:
+                async with self.network.bhi_lock:
+                    header = self.network.blockchain().read_header(utxo.height)
+                tx_info = TxMinedInfo(height=utxo.height,
+                                      timestamp=header.get('timestamp'),
+                                      txpos=0,
+                                      header_hash=hash_header(header))
+                self.adb.add_verified_tx(utxo.output_id, tx_info)
+            self.adb.add_transaction(tx, allow_unrelated=True)
 
 
 

@@ -106,6 +106,7 @@ class Sighash(IntEnum):
 class TxOutput:
     scriptpubkey: bytes
     value: Union[int, str]
+    mweb_output_id: str
 
     def __init__(self, *, scriptpubkey: bytes, value: Union[int, str]):
         self.scriptpubkey = scriptpubkey
@@ -121,6 +122,8 @@ class TxOutput:
     def serialize_to_network(self) -> bytes:
         buf = int.to_bytes(self.value, 8, byteorder="little", signed=False)
         script = self.scriptpubkey
+        if self.mweb_output_id != "":
+            script = b"mweb" + script + bfh(self.mweb_output_id)
         buf += bfh(var_int(len(script.hex()) // 2))
         buf += script
         return buf
@@ -586,7 +589,13 @@ def parse_output(vds: BCDataStream) -> TxOutput:
     if value < 0:
         raise SerializationError('invalid output amount (negative)')
     scriptpubkey = vds.read_bytes(vds.read_compact_size())
-    return TxOutput(value=value, scriptpubkey=scriptpubkey)
+    mweb_output_id = ""
+    if scriptpubkey[:4] == b'mweb' and len(scriptpubkey) == 102:
+        mweb_output_id = scriptpubkey[70:].hex()
+        scriptpubkey = scriptpubkey[4:70]
+    output = TxOutput(value=value, scriptpubkey=scriptpubkey)
+    output.mweb_output_id = mweb_output_id
+    return output
 
 
 # pay & redeem scripts
@@ -679,12 +688,8 @@ class Transaction:
             if marker != b'\x01':
                 raise ValueError('invalid txn marker byte: {}'.format(marker))
             n_vin = vds.read_compact_size()
-        if n_vin < 1:
-            raise SerializationError('tx needs to have at least 1 input')
         txins = [parse_input(vds) for i in range(n_vin)]
         n_vout = vds.read_compact_size()
-        if n_vout < 1:
-            raise SerializationError('tx needs to have at least 1 output')
         self._outputs = [parse_output(vds) for i in range(n_vout)]
         if is_segwit:
             for txin in txins:
@@ -855,7 +860,7 @@ class Transaction:
 
     def is_segwit(self, *, guess_for_address=False):
         return any(txin.is_segwit(guess_for_address=guess_for_address)
-                   for txin in self.inputs())
+                   for txin in self.inputs()) or len(self.inputs()) == 0
 
     def invalidate_ser_cache(self):
         self._cached_network_ser = None
@@ -915,6 +920,11 @@ class Transaction:
             all_segwit = all(txin.is_segwit() for txin in self.inputs())
             if not all_segwit and not self.is_complete():
                 return None
+            if len(self.inputs()) == 0 and len(self.outputs()) == 1:
+                id = self.outputs()[0].mweb_output_id
+                if id != "":
+                    self._cached_txid = id
+                    return id
             try:
                 ser = self.serialize_to_network(force_legacy=True)
             except UnknownTxinType:
