@@ -14,6 +14,11 @@ class RpcStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.Status = channel.unary_unary(
+                '/Rpc/Status',
+                request_serializer=mwebd__pb2.StatusRequest.SerializeToString,
+                response_deserializer=mwebd__pb2.StatusResponse.FromString,
+                )
         self.Utxos = channel.unary_stream(
                 '/Rpc/Utxos',
                 request_serializer=mwebd__pb2.UtxosRequest.SerializeToString,
@@ -38,6 +43,12 @@ class RpcStub(object):
 
 class RpcServicer(object):
     """Missing associated documentation comment in .proto file."""
+
+    def Status(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def Utxos(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -66,6 +77,11 @@ class RpcServicer(object):
 
 def add_RpcServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'Status': grpc.unary_unary_rpc_method_handler(
+                    servicer.Status,
+                    request_deserializer=mwebd__pb2.StatusRequest.FromString,
+                    response_serializer=mwebd__pb2.StatusResponse.SerializeToString,
+            ),
             'Utxos': grpc.unary_stream_rpc_method_handler(
                     servicer.Utxos,
                     request_deserializer=mwebd__pb2.UtxosRequest.FromString,
@@ -95,6 +111,23 @@ def add_RpcServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class Rpc(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def Status(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/Status',
+            mwebd__pb2.StatusRequest.SerializeToString,
+            mwebd__pb2.StatusResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def Utxos(request,

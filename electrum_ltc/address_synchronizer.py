@@ -164,7 +164,7 @@ class AddressSynchronizer(Logger, EventListener):
         if address:
             d = self.db.get_txo_addr(prevout_hash, address)
             try:
-                v, cb = d[prevout_n]
+                v, cb, mw = d[prevout_n]
                 return v
             except KeyError:
                 pass
@@ -308,7 +308,7 @@ class AddressSynchronizer(Logger, EventListener):
                 if addr and self.is_mine(addr):
                     outputs = self.db.get_txo_addr(prevout_hash, addr)
                     try:
-                        v, is_cb = outputs[prevout_n]
+                        v, is_cb, mw = outputs[prevout_n]
                     except KeyError:
                         pass
                     else:
@@ -330,7 +330,7 @@ class AddressSynchronizer(Logger, EventListener):
                 self.db.add_prevout_by_scripthash(scripthash, prevout=TxOutpoint.from_str(ser), value=v)
                 addr = txo.address
                 if addr and self.is_mine(addr):
-                    self.db.add_txo_addr(tx_hash, addr, n, v, is_coinbase)
+                    self.db.add_txo_addr(tx_hash, addr, n, v, is_coinbase, txo.mweb_output_id)
                     self._get_balance_cache.clear()  # invalidate cache
                     # give v to txi that spends me
                     next_tx = self.db.get_spent_outpoint(tx_hash, n)
@@ -716,7 +716,7 @@ class AddressSynchronizer(Logger, EventListener):
             delta -= v
         # add the value of the coins received at address
         d = self.db.get_txo_addr(tx_hash, address)
-        for n, (v, cb) in d.items():
+        for n, (v, cb, mw) in d.items():
             delta += v
         return delta
 
@@ -757,7 +757,7 @@ class AddressSynchronizer(Logger, EventListener):
                     v_in += value
             for txout in tx.outputs():
                 v_out += txout.value
-        if v_in == 0:
+        if v_in == 0 or v_out == 0:
             fee = 0
         elif v_in is not None:
             fee = v_in - v_out
@@ -775,8 +775,8 @@ class AddressSynchronizer(Logger, EventListener):
             sent = {}
             for tx_hash, height in h:
                 d = self.db.get_txo_addr(tx_hash, address)
-                for n, (v, is_cb) in d.items():
-                    received[tx_hash + ':%d'%n] = (height, v, is_cb)
+                for n, (v, is_cb, mw) in d.items():
+                    received[tx_hash + ':%d'%n] = (height, v, is_cb, mw)
             for tx_hash, height in h:
                 l = self.db.get_txi_addr(tx_hash, address)
                 for txi, v in l:
@@ -787,7 +787,7 @@ class AddressSynchronizer(Logger, EventListener):
         coins, spent = self.get_addr_io(address)
         out = {}
         for prevout_str, v in coins.items():
-            tx_height, value, is_cb = v
+            tx_height, value, is_cb, mweb_output_id = v
             prevout = TxOutpoint.from_str(prevout_str)
             utxo = PartialTxInput(prevout=prevout, is_coinbase_output=is_cb)
             utxo._trusted_address = address
@@ -800,6 +800,7 @@ class AddressSynchronizer(Logger, EventListener):
             else:
                 utxo.spent_txid = None
                 utxo.spent_height = None
+            utxo.mweb_output_id = mweb_output_id
             out[prevout] = utxo
         return out
 

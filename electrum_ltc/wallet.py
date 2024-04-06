@@ -749,7 +749,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                     v_out_mine += txout.value
                     is_relevant = True
         delta = v_out_mine - v_in_mine
-        if v_in == 0:
+        if v_in == 0 or v_out == 0:
             fee = 0
         elif v_in is not None:
             fee = v_in - v_out
@@ -3413,13 +3413,26 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
         return resp.address[0]
 
     def synchronize(self):
-        if self.txin_type == 'mweb':
+        if self.txin_type == 'mweb' and self.network is not None:
+            utxos = {}
+            for utxo in self.get_utxos():
+                if utxo.block_height > 0:
+                    utxos[utxo.mweb_output_id] = utxo
             channel = grpc.insecure_channel('localhost:1234')
             stub = mwebd_pb2_grpc.RpcStub(channel)
-            output_id = []
-            resp = stub.Spent(mwebd_pb2.SpentRequest(output_id=output_id))
-            for output_id in resp.output_id:
-                print(output_id)
+            resp = stub.Spent(mwebd_pb2.SpentRequest(output_id=utxos.keys()))
+            if len(resp.output_id) > 0:
+                tx = Transaction(None)
+                tx._inputs = [TxInput(prevout=utxos[x].prevout, script_sig=b'')
+                              for x in resp.output_id]
+                tx._outputs = []
+                height = self.network.blockchain().height()
+                for address in [utxos[x].address for x in resp.output_id]:
+                    hist = dict(self.adb.db.get_addr_history(address))
+                    hist[tx.txid()] = height
+                    self.adb.db.set_addr_history(address, list(hist.items()))
+                asyncio.run_coroutine_threadsafe(self._add_transaction(tx, height),
+                                                 self.network.asyncio_loop)
         return Deterministic_Wallet.synchronize(self)
 
     def start_network(self, network):
@@ -3440,25 +3453,28 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
             tx._outputs = [TxOutput.from_address_and_value(utxo.address, utxo.value)]
             tx._outputs[0].mweb_output_id = utxo.output_id
             hist = dict(self.adb.db.get_addr_history(utxo.address))
-            hist[utxo.output_id] = utxo.height
+            hist[tx.txid()] = utxo.height
             self.adb.db.set_addr_history(utxo.address, list(hist.items()))
-            self.adb.add_unverified_or_unconfirmed_tx(utxo.output_id, utxo.height)
-            self.adb.add_transaction(tx, allow_unrelated=True)
-            self.adb.set_up_to_date(True)
-            if utxo.height > 0:
-                await self.taskgroup.spawn(self._add_verified_utxo, utxo)
+            await self._add_transaction(tx, utxo.height)
 
-    async def _add_verified_utxo(self, utxo):
+    async def _add_transaction(self, tx, height):
+        self.adb.add_unverified_or_unconfirmed_tx(tx.txid(), height)
+        self.adb.add_transaction(tx, allow_unrelated=True)
+        self.adb.set_up_to_date(True)
+        if height > 0:
+            await self.taskgroup.spawn(self._add_verified_tx, tx.txid(), height)
+
+    async def _add_verified_tx(self, tx_hash, height):
         header = None
-        while header == None:
+        while header is None:
             await asyncio.sleep(0.1)
             async with self.network.bhi_lock:
-                header = self.network.blockchain().read_header(utxo.height)
-        tx_info = TxMinedInfo(height=utxo.height,
+                header = self.network.blockchain().read_header(height)
+        tx_info = TxMinedInfo(height=height,
                               timestamp=header.get('timestamp'),
                               txpos=0,
                               header_hash=hash_header(header))
-        self.adb.add_verified_tx(utxo.output_id, tx_info)
+        self.adb.add_verified_tx(tx_hash, tx_info)
 
 
 

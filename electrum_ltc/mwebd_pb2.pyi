@@ -5,6 +5,20 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Op
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class StatusRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class StatusResponse(_message.Message):
+    __slots__ = ("block_header_height", "mweb_header_height", "mweb_utxos_height")
+    BLOCK_HEADER_HEIGHT_FIELD_NUMBER: _ClassVar[int]
+    MWEB_HEADER_HEIGHT_FIELD_NUMBER: _ClassVar[int]
+    MWEB_UTXOS_HEIGHT_FIELD_NUMBER: _ClassVar[int]
+    block_header_height: int
+    mweb_header_height: int
+    mweb_utxos_height: int
+    def __init__(self, block_header_height: _Optional[int] = ..., mweb_header_height: _Optional[int] = ..., mweb_utxos_height: _Optional[int] = ...) -> None: ...
+
 class UtxosRequest(_message.Message):
     __slots__ = ("from_height", "scan_secret")
     FROM_HEIGHT_FIELD_NUMBER: _ClassVar[int]

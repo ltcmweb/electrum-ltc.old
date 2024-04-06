@@ -1247,6 +1247,7 @@ class PartialTxInput(TxInput, PSBTSection):
         self._is_p2sh_segwit = None  # type: Optional[bool]  # None means unknown
         self._is_native_segwit = None  # type: Optional[bool]  # None means unknown
         self.witness_sizehint = None  # type: Optional[int]  # byte size of serialized complete witness, for tx size est
+        self.mweb_output_id = None
 
     @property
     def utxo(self):
