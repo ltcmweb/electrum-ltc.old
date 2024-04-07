@@ -1639,11 +1639,15 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 old_change_addrs = []
             # change address. if empty, coin_chooser will set it
             change_addrs = self.get_change_addresses_for_new_transaction(change_addr or old_change_addrs)
+            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+            spend_secret, _ = self.keystore.get_private_key([0x80000001], None)
             tx = coin_chooser.make_tx(
                 coins=coins,
                 inputs=txi,
                 outputs=list(outputs) + txo,
                 change_addrs=change_addrs,
+                scan_secret=scan_secret,
+                spend_secret=spend_secret,
                 fee_estimator_vb=fee_estimator,
                 dust_threshold=self.dust_threshold())
         else:
@@ -3426,7 +3430,8 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
                 tx._inputs = [TxInput(prevout=utxos[x].prevout, script_sig=b'')
                               for x in resp.output_id]
                 tx._outputs = []
-                height = self.network.blockchain().height()
+                resp2 = stub.Status(mwebd_pb2.StatusRequest())
+                height = resp2.mweb_utxos_height
                 for address in [utxos[x].address for x in resp.output_id]:
                     hist = dict(self.adb.db.get_addr_history(address))
                     hist[tx.txid()] = height

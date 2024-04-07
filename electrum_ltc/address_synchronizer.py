@@ -814,7 +814,7 @@ class AddressSynchronizer(Logger, EventListener):
     # return the total amount ever received by an address
     def get_addr_received(self, address):
         received, sent = self.get_addr_io(address)
-        return sum([v for height, v, is_cb in received.values()])
+        return sum([v for height, v, is_cb, mw in received.values()])
 
     @with_local_height_cached
     def get_balance(self, domain, *, excluded_addresses: Set[str] = None,

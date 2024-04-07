@@ -113,6 +113,7 @@ class TxOutput:
         if not (isinstance(value, int) or parse_max_spend(value) is not None):
             raise ValueError(f"bad txout value: {value!r}")
         self.value = value  # int in satoshis; or spend-max-like str
+        self.mweb_output_id = ""
 
     @classmethod
     def from_address_and_value(cls, address: str, value: Union[int, str]) -> Union['TxOutput', 'PartialTxOutput']:
@@ -317,8 +318,8 @@ class BCDataStream(object):
     def read_bytes(self, length: int) -> bytes:
         if self.input is None:
             raise SerializationError("call write(bytes) before trying to deserialize")
-        assert length >= 0
         input_len = len(self.input)
+        if length < 0: length += input_len - self.read_cursor
         read_begin = self.read_cursor
         read_end = read_begin + length
         if 0 <= read_begin <= read_end <= input_len:
@@ -629,6 +630,9 @@ class Transaction:
         self._locktime = 0
         self._version = 2
 
+        self._flag = None
+        self._extra_bytes = b''
+
         self._cached_txid = None  # type: Optional[str]
 
     @property
@@ -684,9 +688,10 @@ class Transaction:
         n_vin = vds.read_compact_size()
         is_segwit = (n_vin == 0)
         if is_segwit:
-            marker = vds.read_bytes(1)
-            if marker != b'\x01':
-                raise ValueError('invalid txn marker byte: {}'.format(marker))
+            self._flag = vds.read_bytes(1)
+            if self._flag[0] & 9 == 0:
+                raise ValueError('invalid txn marker byte: {}'.format(self._flag))
+            is_segwit = self._flag[0] & 1 > 0
             n_vin = vds.read_compact_size()
         txins = [parse_input(vds) for i in range(n_vin)]
         n_vout = vds.read_compact_size()
@@ -695,9 +700,8 @@ class Transaction:
             for txin in txins:
                 parse_witness(vds, txin)
         self._inputs = txins  # only expose field after witness is parsed, for sanity
+        self._extra_bytes = vds.read_bytes(-4)
         self._locktime = vds.read_uint32()
-        if vds.can_read_more():
-            raise SerializationError('extra junk at the end')
 
     @classmethod
     def get_siglist(self, txin: 'PartialTxInput', *, estimate_size=False):
@@ -800,7 +804,7 @@ class Transaction:
             return construct_script([0, *sig_list, redeem_script])
         elif _type == 'p2pkh':
             return construct_script([sig_list[0], pubkeys[0]])
-        elif _type in ['p2wpkh', 'p2wsh']:
+        elif _type in ['p2wpkh', 'p2wsh', 'mweb']:
             return ''
         elif _type == 'p2wpkh-p2sh':
             redeem_script = bitcoin.p2wpkh_nested_script(pubkeys[0])
@@ -899,9 +903,9 @@ class Transaction:
         use_segwit_ser = use_segwit_ser_for_estimate_size or use_segwit_ser_for_actual_use
         if include_sigs and not force_legacy and use_segwit_ser:
             marker = '00'
-            flag = '01'
+            flag = '01' if self._flag is None else '%02x' % (self._flag[0] | 1)
             witness = ''.join(self.serialize_witness(x, estimate_size=estimate_size) for x in inputs)
-            return nVersion + marker + flag + txins + txouts + witness + nLocktime
+            return nVersion + marker + flag + txins + txouts + witness + self._extra_bytes.hex() + nLocktime
         else:
             return nVersion + txins + txouts + nLocktime
 
@@ -1701,6 +1705,8 @@ class PartialTransaction(Transaction):
         res._outputs = [PartialTxOutput.from_txout(txout) for txout in tx.outputs()]
         res.version = tx.version
         res.locktime = tx.locktime
+        res._flag = tx._flag
+        res._extra_bytes = tx._extra_bytes
         return res
 
     @classmethod

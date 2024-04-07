@@ -26,11 +26,14 @@ from collections import defaultdict
 from math import floor, log10
 from typing import NamedTuple, List, Callable, Sequence, Union, Dict, Tuple, Mapping, Type
 from decimal import Decimal
+import grpc
 
-from .bitcoin import sha256, COIN, is_address
+from .bitcoin import sha256, COIN, is_address, is_mweb_address
 from .transaction import Transaction, TxOutput, PartialTransaction, PartialTxInput, PartialTxOutput
 from .util import NotEnoughFunds
 from .logging import Logger
+from . import mwebd_pb2_grpc
+from . import mwebd_pb2
 
 
 # A simple deterministic PRNG.  Used to deterministically shuffle a
@@ -267,6 +270,7 @@ class CoinChooserBase(Logger):
 
     def make_tx(self, *, coins: Sequence[PartialTxInput], inputs: List[PartialTxInput],
                 outputs: List[PartialTxOutput], change_addrs: Sequence[str],
+                scan_secret: bytes, spend_secret: bytes,
                 fee_estimator_vb: Callable, dust_threshold: int) -> PartialTransaction:
         """Select unspent coins to spend to pay outputs.  If the change is
         greater than dust_threshold (after adding the change output to
@@ -300,6 +304,29 @@ class CoinChooserBase(Logger):
         def fee_estimator_w(weight):
             return fee_estimator_vb(Transaction.virtual_size_from_weight(weight))
 
+        def tx_from_buckets(buckets):
+            tx, change = self._construct_tx_from_selected_buckets(buckets=buckets,
+                base_tx=base_tx, change_addrs=change_addrs, fee_estimator_w=fee_estimator_w,
+                dust_threshold=dust_threshold, base_weight=base_weight)
+            canonical_change, txouts = [], []
+            for txout in tx.outputs():
+                if txout in change and not is_mweb_address(txout.address):
+                    canonical_change.append(txout)
+                else:
+                    txouts.append(txout)
+            tx._outputs = txouts
+            channel = grpc.insecure_channel('localhost:1234')
+            stub = mwebd_pb2_grpc.RpcStub(channel)
+            resp = stub.Create(mwebd_pb2.CreateRequest(
+                raw_tx=bytes.fromhex(tx.serialize_to_network(include_sigs=False)),
+                scan_secret=scan_secret, spend_secret=spend_secret,
+                fee_rate_per_kb=fee_estimator_vb(1000)))
+            tx2 = PartialTransaction.from_tx(Transaction(resp.raw_tx))
+            for i, txin in enumerate(tx2.inputs()):
+                tx2.inputs()[i] = next(x for x in tx.inputs() if str(x.prevout) == str(txin.prevout))
+            tx2.add_outputs(canonical_change)
+            return tx2, change
+
         def sufficient_funds(buckets, *, bucket_value_sum):
             '''Given a list of buckets, return True if it has enough
             value to pay for the transaction'''
@@ -313,16 +340,12 @@ class CoinChooserBase(Logger):
                 return False
             # note re performance: so far this was constant time
             # what follows is linear in len(buckets)
+            try:
+                tx, _ = tx_from_buckets(buckets)
+            except:
+                return False
             total_weight = self._get_tx_weight(buckets, base_weight=base_weight)
-            return total_input >= spent_amount + fee_estimator_w(total_weight)
-
-        def tx_from_buckets(buckets):
-            return self._construct_tx_from_selected_buckets(buckets=buckets,
-                                                            base_tx=base_tx,
-                                                            change_addrs=change_addrs,
-                                                            fee_estimator_w=fee_estimator_w,
-                                                            dust_threshold=dust_threshold,
-                                                            base_weight=base_weight)
+            return tx.input_value() >= tx.output_value() + fee_estimator_w(total_weight)
 
         # Collect the coins into buckets
         all_buckets = self.bucketize_coins(coins, fee_estimator_vb=fee_estimator_vb)
