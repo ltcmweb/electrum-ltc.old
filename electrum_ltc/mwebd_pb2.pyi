@@ -88,3 +88,15 @@ class CreateResponse(_message.Message):
     raw_tx: bytes
     output_id: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, raw_tx: _Optional[bytes] = ..., output_id: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class BroadcastRequest(_message.Message):
+    __slots__ = ("raw_tx",)
+    RAW_TX_FIELD_NUMBER: _ClassVar[int]
+    raw_tx: bytes
+    def __init__(self, raw_tx: _Optional[bytes] = ...) -> None: ...
+
+class BroadcastResponse(_message.Message):
+    __slots__ = ("txid",)
+    TXID_FIELD_NUMBER: _ClassVar[int]
+    txid: str
+    def __init__(self, txid: _Optional[str] = ...) -> None: ...

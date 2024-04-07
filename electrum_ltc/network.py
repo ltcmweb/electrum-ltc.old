@@ -62,6 +62,8 @@ from .version import PROTOCOL_VERSION
 from .simple_config import SimpleConfig
 from .i18n import _
 from .logging import get_logger, Logger
+from . import mwebd
+from .mwebd_pb2 import BroadcastRequest
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -893,8 +895,9 @@ class Network(Logger, NetworkRetryManager[ServerAddr]):
         if timeout is None:
             timeout = self.get_network_timeout_seconds(NetworkTimeout.Urgent)
         try:
-            out = await self.interface.session.send_request('blockchain.transaction.broadcast', [tx.serialize()], timeout=timeout)
-            # note: both 'out' and exception messages are untrusted input from the server
+            stub = mwebd.stub_async()
+            resp = await stub.Broadcast(BroadcastRequest(raw_tx=tx.serialize_as_bytes()))
+            tx._cached_txid = resp.txid
         except (RequestTimedOut, asyncio.CancelledError, asyncio.TimeoutError):
             raise  # pass-through
         except aiorpcx.jsonrpc.CodeMessageError as e:
@@ -904,9 +907,6 @@ class Network(Logger, NetworkRetryManager[ServerAddr]):
             self.logger.info(f"broadcast_transaction error2 [DO NOT TRUST THIS MESSAGE]: {repr(e)}")
             send_exception_to_crash_reporter(e)
             raise TxBroadcastUnknownError() from e
-        if out != tx.txid():
-            self.logger.info(f"unexpected txid for broadcast_transaction [DO NOT TRUST THIS MESSAGE]: {out} != {tx.txid()}")
-            raise TxBroadcastHashMismatch(_("Server returned unexpected transaction ID."))
 
     async def try_broadcasting(self, tx, name) -> bool:
         try:

@@ -46,7 +46,6 @@ import itertools
 import threading
 import enum
 import asyncio
-import grpc
 
 from aiorpcx import timeout_after, TaskTimeout, ignore_after, run_in_thread
 
@@ -86,8 +85,8 @@ from .lnworker import LNWallet
 from .paymentrequest import PaymentRequest
 from .util import read_json_file, write_json_file, UserFacingException, FileImportFailed
 from .util import EventListener, event_listener
-from . import mwebd_pb2_grpc
-from . import mwebd_pb2
+from . import mwebd
+from .mwebd_pb2 import AddressRequest, SpentRequest, StatusRequest, UtxosRequest
 
 if TYPE_CHECKING:
     from .network import Network
@@ -3406,9 +3405,7 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
             return self._address_cache[n]
         scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
         spend_pubkey, _ = self.keystore.get_keypair([0x80000001], None)
-        channel = grpc.insecure_channel('localhost:1234')
-        stub = mwebd_pb2_grpc.RpcStub(channel)
-        resp = stub.Addresses(mwebd_pb2.AddressRequest(
+        resp = mwebd.stub().Addresses(AddressRequest(
             from_index=n, to_index=n + (1 if for_change == 1 else 1000),
             scan_secret=scan_secret, spend_pubkey=spend_pubkey))
         for address in resp.address:
@@ -3422,15 +3419,13 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
             for utxo in self.get_utxos():
                 if utxo.block_height > 0:
                     utxos[utxo.mweb_output_id] = utxo
-            channel = grpc.insecure_channel('localhost:1234')
-            stub = mwebd_pb2_grpc.RpcStub(channel)
-            resp = stub.Spent(mwebd_pb2.SpentRequest(output_id=utxos.keys()))
+            resp = mwebd.stub().Spent(SpentRequest(output_id=utxos.keys()))
             if len(resp.output_id) > 0:
                 tx = Transaction(None)
                 tx._inputs = [TxInput(prevout=utxos[x].prevout, script_sig=b'')
                               for x in resp.output_id]
                 tx._outputs = []
-                resp2 = stub.Status(mwebd_pb2.StatusRequest())
+                resp2 = mwebd.stub().Status(StatusRequest())
                 height = resp2.mweb_utxos_height
                 for address in [utxos[x].address for x in resp.output_id]:
                     hist = dict(self.adb.db.get_addr_history(address))
@@ -3448,11 +3443,8 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
                                              self.network.asyncio_loop)
 
     async def subscribe_mweb_utxos(self, scan_secret):
-        channel = grpc.aio.insecure_channel('localhost:1234')
-        stub = mwebd_pb2_grpc.RpcStub(channel)
-        call = stub.Utxos(mwebd_pb2.UtxosRequest(scan_secret=scan_secret))
-        while True:
-            utxo = await call.read()
+        stub = mwebd.stub_async()
+        async for utxo in stub.Utxos(UtxosRequest(scan_secret=scan_secret)):
             tx = Transaction(None)
             tx._inputs = []
             tx._outputs = [TxOutput.from_address_and_value(utxo.address, utxo.value)]

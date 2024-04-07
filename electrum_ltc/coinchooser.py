@@ -26,14 +26,13 @@ from collections import defaultdict
 from math import floor, log10
 from typing import NamedTuple, List, Callable, Sequence, Union, Dict, Tuple, Mapping, Type
 from decimal import Decimal
-import grpc
 
 from .bitcoin import sha256, COIN, is_address, is_mweb_address
 from .transaction import Transaction, TxOutput, PartialTransaction, PartialTxInput, PartialTxOutput
 from .util import NotEnoughFunds
 from .logging import Logger
-from . import mwebd_pb2_grpc
-from . import mwebd_pb2
+from . import mwebd
+from .mwebd_pb2 import CreateRequest
 
 
 # A simple deterministic PRNG.  Used to deterministically shuffle a
@@ -315,16 +314,17 @@ class CoinChooserBase(Logger):
                 else:
                     txouts.append(txout)
             tx._outputs = txouts
-            channel = grpc.insecure_channel('localhost:1234')
-            stub = mwebd_pb2_grpc.RpcStub(channel)
-            resp = stub.Create(mwebd_pb2.CreateRequest(
+            resp = mwebd.stub().Create(CreateRequest(
                 raw_tx=bytes.fromhex(tx.serialize_to_network(include_sigs=False)),
                 scan_secret=scan_secret, spend_secret=spend_secret,
                 fee_rate_per_kb=fee_estimator_vb(1000)))
             tx2 = PartialTransaction.from_tx(Transaction(resp.raw_tx))
             for i, txin in enumerate(tx2.inputs()):
                 tx2.inputs()[i] = next(x for x in tx.inputs() if str(x.prevout) == str(txin.prevout))
-            tx2.add_outputs(canonical_change)
+            fee_increase = tx2.output_value() - tx.output_value()
+            for txout in canonical_change:
+                txout.value -= floor(fee_increase / len(canonical_change))
+            tx2.add_outputs([x for x in canonical_change if x.value > 0])
             return tx2, change
 
         def sufficient_funds(buckets, *, bucket_value_sum):
