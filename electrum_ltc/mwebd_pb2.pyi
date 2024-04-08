@@ -70,16 +70,18 @@ class SpentResponse(_message.Message):
     def __init__(self, output_id: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CreateRequest(_message.Message):
-    __slots__ = ("raw_tx", "scan_secret", "spend_secret", "fee_rate_per_kb")
+    __slots__ = ("raw_tx", "scan_secret", "spend_secret", "fee_rate_per_kb", "dry_run")
     RAW_TX_FIELD_NUMBER: _ClassVar[int]
     SCAN_SECRET_FIELD_NUMBER: _ClassVar[int]
     SPEND_SECRET_FIELD_NUMBER: _ClassVar[int]
     FEE_RATE_PER_KB_FIELD_NUMBER: _ClassVar[int]
+    DRY_RUN_FIELD_NUMBER: _ClassVar[int]
     raw_tx: bytes
     scan_secret: bytes
     spend_secret: bytes
     fee_rate_per_kb: int
-    def __init__(self, raw_tx: _Optional[bytes] = ..., scan_secret: _Optional[bytes] = ..., spend_secret: _Optional[bytes] = ..., fee_rate_per_kb: _Optional[int] = ...) -> None: ...
+    dry_run: bool
+    def __init__(self, raw_tx: _Optional[bytes] = ..., scan_secret: _Optional[bytes] = ..., spend_secret: _Optional[bytes] = ..., fee_rate_per_kb: _Optional[int] = ..., dry_run: bool = ...) -> None: ...
 
 class CreateResponse(_message.Message):
     __slots__ = ("raw_tx", "output_id")

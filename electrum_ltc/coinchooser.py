@@ -300,10 +300,12 @@ class CoinChooserBase(Logger):
         base_weight = base_tx.estimated_weight()
         spent_amount = base_tx.output_value()
 
+        stub = mwebd.stub()
+
         def fee_estimator_w(weight):
             return fee_estimator_vb(Transaction.virtual_size_from_weight(weight))
 
-        def tx_from_buckets(buckets):
+        def tx_from_buckets(buckets, dry_run = True):
             tx, change = self._construct_tx_from_selected_buckets(buckets=buckets,
                 base_tx=base_tx, change_addrs=change_addrs, fee_estimator_w=fee_estimator_w,
                 dust_threshold=dust_threshold, base_weight=base_weight)
@@ -314,17 +316,27 @@ class CoinChooserBase(Logger):
                 else:
                     txouts.append(txout)
             tx._outputs = txouts
-            resp = mwebd.stub().Create(CreateRequest(
-                raw_tx=bytes.fromhex(tx.serialize_to_network(include_sigs=False)),
-                scan_secret=scan_secret, spend_secret=spend_secret,
-                fee_rate_per_kb=fee_estimator_vb(1000)))
-            tx2 = PartialTransaction.from_tx(Transaction(resp.raw_tx))
-            for i, txin in enumerate(tx2.inputs()):
-                tx2.inputs()[i] = next(x for x in tx.inputs() if str(x.prevout) == str(txin.prevout))
-            fee_increase = tx2.output_value() - tx.output_value()
-            for txout in canonical_change:
-                txout.value -= floor(fee_increase / len(canonical_change))
-            tx2.add_outputs([x for x in canonical_change if x.value > 0])
+            for i in [0, 1]:
+                raw_tx = bytes.fromhex(tx.serialize_to_network(include_sigs=False))
+                resp = stub.Create(CreateRequest(raw_tx=raw_tx,
+                    scan_secret=scan_secret, spend_secret=spend_secret,
+                    fee_rate_per_kb=fee_estimator_vb(1000), dry_run=dry_run))
+                if resp.raw_tx == raw_tx: break
+                tx2 = PartialTransaction.from_tx(Transaction(resp.raw_tx))
+                for j, txin in enumerate(tx2.inputs()):
+                    tx2.inputs()[j] = next(x for x in tx.inputs() if str(x.prevout) == str(txin.prevout))
+                mweb_input = tx.input_value() - tx2.input_value()
+                expected_pegin = max(0, tx.output_value() - mweb_input)
+                fee_increase = tx2.output_value() - expected_pegin
+                if expected_pegin: fee_increase += fee_estimator_vb(41)
+                if i == 1 or sum([x.value for x in change]) < fee_increase:
+                    break
+                for j, txout in enumerate(change):
+                    x = floor(fee_increase / (len(change)-j))
+                    txout.value -= x
+                    fee_increase -= x
+            tx2.add_outputs(canonical_change)
+            if dry_run: tx2._extra_bytes = b''
             return tx2, change
 
         def sufficient_funds(buckets, *, bucket_value_sum):
@@ -344,8 +356,9 @@ class CoinChooserBase(Logger):
                 tx, _ = tx_from_buckets(buckets)
             except:
                 return False
-            total_weight = self._get_tx_weight(buckets, base_weight=base_weight)
-            return tx.input_value() >= tx.output_value() + fee_estimator_w(total_weight)
+            if len(tx.inputs()) == len(tx.outputs()) == 0:
+                return True
+            return tx.input_value() >= tx.output_value() + fee_estimator_w(tx.estimated_weight())
 
         # Collect the coins into buckets
         all_buckets = self.bucketize_coins(coins, fee_estimator_vb=fee_estimator_vb)
@@ -357,7 +370,7 @@ class CoinChooserBase(Logger):
         # Choose a subset of the buckets
         scored_candidate = self.choose_buckets(all_buckets, sufficient_funds,
                                                self.penalty_func(base_tx, tx_from_buckets=tx_from_buckets))
-        tx = scored_candidate.tx
+        tx, _ = tx_from_buckets(scored_candidate.buckets, False)
 
         self.logger.info(f"using {len(tx.inputs())} inputs")
         self.logger.info(f"using buckets: {[bucket.desc for bucket in scored_candidate.buckets]}")

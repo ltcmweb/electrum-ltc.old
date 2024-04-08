@@ -2197,6 +2197,10 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 pass
         self._add_input_sig_info(txin, address, only_der_suffix=only_der_suffix)
         txin.block_height = self.adb.get_tx_height(txin.prevout.txid.hex()).height
+        if txin.script_type == 'mweb':
+            index = self.get_address_index(address)
+            index = index[-1] + 1 if index[-2] == 0 else 0
+            txin.prevout = TxOutpoint(txin.prevout.txid, index)
 
     def can_sign(self, tx: Transaction) -> bool:
         if not isinstance(tx, PartialTransaction):
@@ -2793,7 +2797,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         long_warning = None
         short_warning = None
         allow_send = True
-        if feerate < self.relayfee() / 1000:
+        if feerate < self.relayfee() / 1000 and fee != 0:
             long_warning = (
                     _("This transaction requires a higher fee, or it will not be propagated by your current server.") + " "
                     + _("Try to raise your transaction fee, or use a server with a lower relay fee."))
