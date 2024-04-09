@@ -839,6 +839,8 @@ class Transaction:
         elif txin.script_type == 'p2pk':
             pubkey = pubkeys[0]
             return bitcoin.public_key_to_p2pk_script(pubkey)
+        elif txin.script_type == 'mweb':
+            return ''
         else:
             raise UnknownTxinType(f'cannot construct preimage_script for txin_type: {txin.script_type}')
 
