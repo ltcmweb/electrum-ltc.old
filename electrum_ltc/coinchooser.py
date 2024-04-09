@@ -330,14 +330,15 @@ class CoinChooserBase(Logger):
                 fee_increase = tx2.output_value() - expected_pegin
                 if expected_pegin: fee_increase += fee_estimator_vb(41)
                 if i == 1 or sum([x.value for x in change]) < fee_increase:
+                    tx = tx2
                     break
                 for j, txout in enumerate(change):
                     x = floor(fee_increase / (len(change)-j))
                     txout.value -= x
                     fee_increase -= x
-            tx2.add_outputs(canonical_change)
-            if dry_run: tx2._extra_bytes = b''
-            return tx2, change
+            tx.add_outputs(canonical_change)
+            if dry_run: tx._extra_bytes = b''
+            return tx, change
 
         def sufficient_funds(buckets, *, bucket_value_sum):
             '''Given a list of buckets, return True if it has enough
