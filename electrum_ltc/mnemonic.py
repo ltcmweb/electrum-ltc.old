@@ -261,6 +261,8 @@ def seed_type(x: str) -> str:
         return '2fa'
     elif is_new_seed(x, version.SEED_PREFIX_2FA_SW):
         return '2fa_segwit'
+    elif is_new_seed(x, version.SEED_PREFIX_MWEB):
+        return 'mweb'
     return ''
 
 

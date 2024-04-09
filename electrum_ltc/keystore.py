@@ -1101,7 +1101,7 @@ def from_seed(seed, passphrase, is_p2sh=False):
     if t == 'old':
         keystore = Old_KeyStore({})
         keystore.add_seed(seed)
-    elif t in ['standard', 'segwit']:
+    elif t in ['standard', 'segwit', 'mweb']:
         keystore = BIP32_KeyStore({})
         keystore.add_seed(seed)
         keystore.passphrase = passphrase
@@ -1109,6 +1109,9 @@ def from_seed(seed, passphrase, is_p2sh=False):
         if t == 'standard':
             der = "m/"
             xtype = 'standard'
+        elif t == 'mweb':
+            der = "m/1000'/"
+            xtype = 'mweb'
         else:
             der = "m/1'/" if is_p2sh else "m/0'/"
             xtype = 'p2wsh' if is_p2sh else 'p2wpkh'

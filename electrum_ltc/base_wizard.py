@@ -207,7 +207,8 @@ class BaseWizard(Logger):
         if self.wallet_type =='standard' or i==0:
             message = _('Do you want to create a new seed, or to restore a wallet using an existing seed?')
             choices = [
-                ('choose_seed_type', _('Create a new seed')),
+                ('choose_seed_type', _('Create a new segwit seed')),
+                ('create_seed_mweb', _('Create a new MWEB seed')),
                 ('restore_from_seed', _('I already have a seed')),
                 ('restore_from_key', _('Use a master key')),
             ]
@@ -528,7 +529,7 @@ class BaseWizard(Logger):
                 root_seed = seed.decrypt(passphrase)
                 self.on_restore_bip43(root_seed)
             self.passphrase_dialog(run_next=f, is_restoring=True) if is_ext else f('')
-        elif self.seed_type in ['standard', 'segwit']:
+        elif self.seed_type in ['standard', 'segwit', 'mweb']:
             f = lambda passphrase: self.run('create_keystore', seed, passphrase)
             self.passphrase_dialog(run_next=f, is_restoring=True) if is_ext else f('')
         elif self.seed_type == 'old':
@@ -700,6 +701,9 @@ class BaseWizard(Logger):
     def choose_seed_type(self):
         seed_type = 'standard' if self.config.get('nosegwit') else 'segwit'
         self.create_seed(seed_type)
+
+    def create_seed_mweb(self):
+        self.create_seed('mweb')
 
     def create_seed(self, seed_type):
         from . import mnemonic
