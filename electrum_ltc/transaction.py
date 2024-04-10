@@ -632,6 +632,7 @@ class Transaction:
 
         self._flag = None
         self._extra_bytes = b''
+        self._mweb_output_ids = {}
 
         self._cached_txid = None  # type: Optional[str]
 

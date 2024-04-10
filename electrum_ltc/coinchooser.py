@@ -330,6 +330,9 @@ class CoinChooserBase(Logger):
                 fee_increase = tx2.output_value() - expected_pegin
                 if expected_pegin: fee_increase += fee_estimator_vb(41)
                 if i == 1 or sum([x.value for x in change]) < fee_increase:
+                    for txout in tx.outputs():
+                        if is_mweb_address(txout.address) and not dry_run:
+                            tx2._mweb_output_ids[resp.output_id.pop(0)] = txout
                     tx = tx2
                     break
                 for j, txout in enumerate(change):
@@ -353,10 +356,7 @@ class CoinChooserBase(Logger):
                 return False
             # note re performance: so far this was constant time
             # what follows is linear in len(buckets)
-            try:
-                tx, _ = tx_from_buckets(buckets)
-            except:
-                return False
+            tx, _ = tx_from_buckets(buckets)
             if len(tx.inputs()) == len(tx.outputs()) == 0:
                 return True
             return tx.input_value() >= tx.output_value() + fee_estimator_w(tx.estimated_weight())

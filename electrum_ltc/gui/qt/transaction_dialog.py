@@ -243,7 +243,7 @@ class BaseTxDialog(QDialog, MessageBoxMixin):
         self.main_window.push_top_level_window(self)
         self.main_window.send_tab.save_pending_invoice()
         try:
-            self.main_window.broadcast_transaction(self.tx)
+            self.main_window.broadcast_transaction(self.tx, callback=lambda x: x)
         finally:
             self.main_window.pop_top_level_window(self)
         self.saved = True

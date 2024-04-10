@@ -1116,7 +1116,10 @@ class WalletDB(JsonDB):
         d = self.txo[tx_hash]
         if addr not in d:
             d[addr] = {}
-        d[addr][n] = (v, is_coinbase, mweb_output_id)
+        if mweb_output_id:
+            d[addr][n] = (v, is_coinbase, mweb_output_id)
+        else:
+            d[addr][n] = (v, is_coinbase)
 
     @locked
     def list_txi(self) -> Sequence[str]:

@@ -1089,6 +1089,25 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             for txout in invoice.get_outputs():
                 self._invoices_from_scriptpubkey_map[txout.scriptpubkey].add(invoice_key)
 
+    async def _add_verified_tx(self, txid, height):
+        header = None
+        while header is None:
+            await asyncio.sleep(0.1)
+            async with self.network.bhi_lock:
+                header = self.network.blockchain().read_header(height)
+        tx_info = TxMinedInfo(height=height,
+                              timestamp=header.get('timestamp'),
+                              txpos=0,
+                              header_hash=hash_header(header))
+        self.adb.add_verified_tx(txid, tx_info)
+
+    async def _check_mweb_output_id(self, txid):
+        stub = mwebd.stub_async()
+        resp = await stub.Spent(SpentRequest(output_id=[txid]))
+        if not resp.output_id:
+            resp = await stub.Status(StatusRequest())
+            await self._add_verified_tx(txid, resp.mweb_utxos_height)
+
     def _is_onchain_invoice_paid(self, invoice: Invoice) -> Tuple[bool, Optional[int], Sequence[str]]:
         """Returns whether on-chain invoice/request is satisfied, num confs required txs have,
         and list of relevant TXIDs.
@@ -1113,6 +1132,9 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                     if 0 < tx_height.height <= invoice.height:  # exclude txs older than invoice
                         continue
                     confs_and_values.append((tx_height.conf or 0, v))
+                    if not tx_height.conf and self.network:
+                        asyncio.run_coroutine_threadsafe(self._check_mweb_output_id(
+                            prevout.txid.hex()), self.network.asyncio_loop)
                 # check that there is at least one TXO, and that they pay enough.
                 # note: "at least one TXO" check is needed for zero amount invoice (e.g. OP_RETURN)
                 vsum = 0
@@ -3464,18 +3486,6 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
         self.adb.set_up_to_date(True)
         if height > 0:
             await self.taskgroup.spawn(self._add_verified_tx, tx.txid(), height)
-
-    async def _add_verified_tx(self, tx_hash, height):
-        header = None
-        while header is None:
-            await asyncio.sleep(0.1)
-            async with self.network.bhi_lock:
-                header = self.network.blockchain().read_header(height)
-        tx_info = TxMinedInfo(height=height,
-                              timestamp=header.get('timestamp'),
-                              txpos=0,
-                              header_hash=hash_header(header))
-        self.adb.add_verified_tx(tx_hash, tx_info)
 
 
 

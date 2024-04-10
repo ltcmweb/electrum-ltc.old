@@ -13,13 +13,14 @@ from PyQt5.QtWidgets import (QLabel, QVBoxLayout, QGridLayout,
 
 from electrum_ltc import util, paymentrequest
 from electrum_ltc import lnutil
+from electrum_ltc.bitcoin import script_to_scripthash
 from electrum_ltc.plugin import run_hook
 from electrum_ltc.i18n import _
 from electrum_ltc.util import (get_asyncio_loop, bh2u, FailedToParsePaymentIdentifier,
                                InvalidBitcoinURI, maybe_extract_lightning_payment_identifier, NotEnoughFunds,
                                NoDynamicFeeEstimates, InvoiceError, parse_max_spend)
 from electrum_ltc.invoices import PR_PAID, Invoice
-from electrum_ltc.transaction import Transaction, PartialTxInput, PartialTransaction, PartialTxOutput
+from electrum_ltc.transaction import Transaction, PartialTxInput, PartialTransaction, PartialTxOutput, TxOutpoint
 from electrum_ltc.network import TxBroadcastError, BestEffortRequestFailed
 from electrum_ltc.logging import Logger
 from electrum_ltc.lnaddr import lndecode, LnInvoiceException
@@ -258,9 +259,15 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
             return
         if is_send:
             self.save_pending_invoice()
+            def broadcast_done(success):
+                if not success: return
+                for output_id, txout in tx._mweb_output_ids.items():
+                    self.wallet.db.add_prevout_by_scripthash(
+                        script_to_scripthash(txout.scriptpubkey.hex()),
+                        prevout=TxOutpoint(bytes.fromhex(output_id), 0), value=txout.value)
             def sign_done(success):
                 if success:
-                    self.window.broadcast_or_show(tx)
+                    self.window.broadcast_or_show(tx, callback=broadcast_done)
             self.window.sign_tx_with_password(
                 tx,
                 callback=sign_done,
@@ -720,7 +727,7 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
         coro = lnworker.pay_invoice(invoice.lightning_invoice, amount_msat=amount_msat)
         self.window.run_coroutine_from_thread(coro, _('Sending payment'))
 
-    def broadcast_transaction(self, tx: Transaction):
+    def broadcast_transaction(self, tx: Transaction, *, callback):
 
         def broadcast_thread():
             # non-GUI thread
@@ -752,6 +759,7 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
             # GUI thread
             if result:
                 success, msg = result
+                callback(success)
                 if success:
                     parent.show_message(_('Payment sent.') + '\n' + msg)
                     self.invoice_list.update()
