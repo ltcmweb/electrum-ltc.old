@@ -3440,16 +3440,15 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
         return resp.address[0]
 
     def synchronize(self):
-        if self.txin_type == 'mweb' and self.network is not None:
-            stub = mwebd.stub()
-            height = stub.Status(StatusRequest()).mweb_utxos_height
-            if height < self.network.get_server_height(): return
+        if self.txin_type == 'mweb' and self.network:
             utxos = {}
             for utxo in self.get_utxos():
-                if utxo.block_height > 0:
+                if utxo.block_height:
                     utxos[utxo.mweb_output_id] = utxo
+            stub = mwebd.stub()
             resp = stub.Spent(SpentRequest(output_id=utxos.keys()))
-            if len(resp.output_id) > 0:
+            height = stub.Status(StatusRequest()).mweb_utxos_height
+            if resp.output_id and height == self.network.get_server_height():
                 tx = Transaction(None)
                 tx._inputs = [TxInput(prevout=utxos[x].prevout, script_sig=b'')
                               for x in resp.output_id]
