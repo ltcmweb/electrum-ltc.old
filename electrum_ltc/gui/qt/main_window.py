@@ -74,6 +74,8 @@ from electrum_ltc.simple_config import SimpleConfig
 from electrum_ltc.logging import Logger
 from electrum_ltc.lnutil import ln_dummy_address, extract_nodeid, ConnStringFormatError
 from electrum_ltc.lnaddr import lndecode
+import electrum_ltc.mwebd as mwebd
+from electrum_ltc.mwebd_pb2 import StatusRequest
 
 from .exception_window import Exception_Hook
 from .amountedit import BTCAmountEdit
@@ -846,10 +848,15 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.receive_tab.request_list.refresh_all()
         self.send_tab.invoice_list.refresh_all()
         # Note this runs in the GUI thread
+        try:
+            height = mwebd.stub().Status(StatusRequest()).mweb_utxos_height
+            needs_update = height < self.network.get_server_height()
+        except:
+            needs_update = True
         if self.need_update.is_set():
             self.need_update.clear()
             self.update_wallet()
-        elif not self.wallet.is_up_to_date():
+        elif not self.wallet.is_up_to_date() or needs_update:
             # this updates "synchronizing" progress
             self.update_status()
         # resolve aliases
@@ -936,6 +943,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
             server_height = self.network.get_server_height()
             server_lag = self.network.get_local_height() - server_height
             fork_str = "_fork" if len(self.network.get_blockchains())>1 else ""
+            try:
+                mwebd_status = mwebd.stub().Status(StatusRequest())
+            except:
+                mwebd_status = None
             # Server height can be 0 after switching to a new server
             # until we get a headers subscription request response.
             # Display the synchronizing message in that case.
@@ -947,6 +958,20 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
             elif server_lag > 1:
                 network_text = _("Server is lagging ({} blocks)").format(server_lag)
                 icon = read_QIcon("status_lagging%s.png"%fork_str)
+            elif mwebd_status is None:
+                network_text = _("MWEB is disconnected")
+                icon = read_QIcon("status_disconnected.png")
+            elif mwebd_status.block_header_height < server_height:
+                network_text = ("{} ({}/{})".format(_("Synchronizing MWEB..."),
+                                mwebd_status.block_header_height, server_height))
+                icon = read_QIcon("status_waiting.png")
+            elif mwebd_status.mweb_header_height < server_height:
+                network_text = ("{} ({}/{})".format(_("Synchronizing MWEB..."),
+                                mwebd_status.mweb_header_height, server_height))
+                icon = read_QIcon("status_waiting.png")
+            elif mwebd_status.mweb_utxos_height < server_height:
+                network_text = _("Synchronizing MWEB...")
+                icon = read_QIcon("status_waiting.png")
             else:
                 network_text = _("Connected")
                 confirmed, unconfirmed, unmatured, frozen, lightning, f_lightning = self.wallet.get_balances_for_piechart()

@@ -3441,18 +3441,19 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
 
     def synchronize(self):
         if self.txin_type == 'mweb' and self.network is not None:
+            stub = mwebd.stub()
+            height = stub.Status(StatusRequest()).mweb_utxos_height
+            if height < self.network.get_server_height(): return
             utxos = {}
             for utxo in self.get_utxos():
                 if utxo.block_height > 0:
                     utxos[utxo.mweb_output_id] = utxo
-            resp = mwebd.stub().Spent(SpentRequest(output_id=utxos.keys()))
+            resp = stub.Spent(SpentRequest(output_id=utxos.keys()))
             if len(resp.output_id) > 0:
                 tx = Transaction(None)
                 tx._inputs = [TxInput(prevout=utxos[x].prevout, script_sig=b'')
                               for x in resp.output_id]
                 tx._outputs = []
-                resp2 = mwebd.stub().Status(StatusRequest())
-                height = resp2.mweb_utxos_height
                 for address in [utxos[x].address for x in resp.output_id]:
                     hist = dict(self.adb.db.get_addr_history(address))
                     hist[tx.txid()] = height
