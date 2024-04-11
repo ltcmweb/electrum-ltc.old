@@ -918,7 +918,8 @@ class Transaction:
             marker = '00'
             flag = '01' if self._flag is None else '%02x' % (self._flag[0] | 1)
             witness = ''.join(self.serialize_witness(x, estimate_size=estimate_size) for x in inputs)
-            return nVersion + marker + flag + txins + txouts + witness + self._extra_bytes.hex() + nLocktime
+            extra = '' if estimate_size else self._extra_bytes.hex()
+            return nVersion + marker + flag + txins + txouts + witness + extra + nLocktime
         else:
             return nVersion + txins + txouts + nLocktime
 
