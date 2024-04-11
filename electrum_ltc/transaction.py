@@ -1713,6 +1713,7 @@ class PartialTransaction(Transaction):
         self._unknown = {}  # type: Dict[bytes, bytes]
         self._trusted_input_value = None  # type: Optional[int]
         self._trusted_output_value = None  # type: Optional[int]
+        self._extra_fee = None
 
     def to_json(self) -> dict:
         d = super().to_json()
@@ -1955,7 +1956,9 @@ class PartialTransaction(Transaction):
 
     def get_fee(self) -> Optional[int]:
         try:
-            return self.input_value() - self.output_value()
+            fee = self.input_value() - self.output_value()
+            if self._extra_fee: fee += self._extra_fee
+            return fee
         except MissingTxInputAmount:
             return None
 

@@ -27,4 +27,5 @@ def create(tx, scan_secret, spend_secret, fee_estimator, *, dry_run = False):
     for txout in tx.outputs():
         if is_mweb_address(txout.address) and not dry_run:
             tx2._mweb_output_ids[resp.output_id.pop(0)] = txout
+    tx2._extra_fee = mweb_input + tx2.output_value() - tx.output_value()
     return tx2, fee_increase
