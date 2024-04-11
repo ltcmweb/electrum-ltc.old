@@ -91,6 +91,7 @@ class SynchronizerBase(NetworkJobOnDefaultServer):
         if not is_address(addr): raise ValueError(f"invalid bitcoin address {addr}")
         if is_mweb_address(addr): return
         if addr in self.requested_addrs: return
+        if address_to_scripthash(addr) in self.scripthash_to_address: return
         self.requested_addrs.add(addr)
         self.add_queue.put_nowait(addr)
 

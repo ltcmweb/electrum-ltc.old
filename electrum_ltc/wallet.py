@@ -1118,6 +1118,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         invoice_amounts = defaultdict(int)  # type: Dict[bytes, int]  # scriptpubkey -> value_sats
         for txo in outputs:  # type: PartialTxOutput
             invoice_amounts[txo.scriptpubkey] += 1 if parse_max_spend(txo.value) else txo.value
+            self.adb.add_address(txo.address)
         relevant_txs = set()
         is_paid = True
         conf_needed = None  # type: Optional[int]
