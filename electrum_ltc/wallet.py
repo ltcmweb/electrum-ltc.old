@@ -781,7 +781,8 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                              and (tx_we_already_have_in_db is None or not tx_we_already_have_in_db.is_complete()))
         label = ''
         tx_mined_status = self.adb.get_tx_height(tx_hash)
-        can_remove = ((tx_mined_status.height in [TX_HEIGHT_FUTURE, TX_HEIGHT_LOCAL])
+        can_remove = ((tx_mined_status.height in [TX_HEIGHT_FUTURE, TX_HEIGHT_LOCAL,
+                                                  TX_HEIGHT_UNCONFIRMED])
                       # otherwise 'height' is unreliable (typically LOCAL):
                       and is_relevant
                       # don't offer during common signing flow, e.g. when watch-only wallet starts creating a tx:
