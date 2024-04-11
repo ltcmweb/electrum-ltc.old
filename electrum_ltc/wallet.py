@@ -1632,6 +1632,9 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         else:
             raise Exception(f'Invalid argument fee: {fee}')
 
+        scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+        spend_secret, _ = self.keystore.get_private_key([0x80000001], None)
+
         if len(i_max) == 0:
             # Let the coin chooser select the coins to spend
             coin_chooser = coinchooser.get_coin_chooser(self.config)
@@ -1660,8 +1663,6 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 old_change_addrs = []
             # change address. if empty, coin_chooser will set it
             change_addrs = self.get_change_addresses_for_new_transaction(change_addr or old_change_addrs)
-            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
-            spend_secret, _ = self.keystore.get_private_key([0x80000001], None)
             tx = coin_chooser.make_tx(
                 coins=coins,
                 inputs=txi,
@@ -1685,17 +1686,27 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             tx = PartialTransaction.from_io(list(coins), list(outputs))
             fee = fee_estimator(tx.estimated_size())
             amount = sendable - tx.output_value() - fee
-            if amount < 0:
-                raise NotEnoughFunds()
-            distr_amount = 0
-            for (weight, i) in i_max:
-                val = int((amount/i_max_sum) * weight)
-                outputs[i].value = val
-                distr_amount += val
 
-            (x,i) = i_max[-1]
-            outputs[i].value += (amount - distr_amount)
-            tx = PartialTransaction.from_io(list(coins), list(outputs))
+            def set_output_values():
+                if amount < 0:
+                    raise NotEnoughFunds()
+                distr_amount = 0
+                for (weight, i) in i_max:
+                    val = int((amount/i_max_sum) * weight)
+                    outputs[i].value = val
+                    distr_amount += val
+
+                (x,i) = i_max[-1]
+                outputs[i].value += (amount - distr_amount)
+                return PartialTransaction.from_io(list(coins), list(outputs))
+
+            tx = set_output_values()
+            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, fee_estimator, dry_run=True)
+            amount -= fee_increase
+            tx2 = set_output_values()
+            tx, _ = mwebd.create(tx2, scan_secret, spend_secret, fee_estimator)
+            tx._trusted_input_value = tx2.input_value()
+            tx._trusted_output_value = tx2.output_value()
 
         # Timelock tx to current height.
         tx.locktime = get_locktime_for_new_transaction(self.network)

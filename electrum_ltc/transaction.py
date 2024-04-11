@@ -1690,6 +1690,8 @@ class PartialTransaction(Transaction):
         self._inputs = []  # type: List[PartialTxInput]
         self._outputs = []  # type: List[PartialTxOutput]
         self._unknown = {}  # type: Dict[bytes, bytes]
+        self._trusted_input_value = None  # type: Optional[int]
+        self._trusted_output_value = None  # type: Optional[int]
 
     def to_json(self) -> dict:
         d = super().to_json()
@@ -1918,12 +1920,16 @@ class PartialTransaction(Transaction):
         self.invalidate_ser_cache()
 
     def input_value(self) -> int:
+        if self._trusted_input_value is not None:
+            return self._trusted_input_value
         input_values = [txin.value_sats() for txin in self.inputs()]
         if any([val is None for val in input_values]):
             raise MissingTxInputAmount()
         return sum(input_values)
 
     def output_value(self) -> int:
+        if self._trusted_output_value is not None:
+            return self._trusted_output_value
         return sum(o.value for o in self.outputs())
 
     def get_fee(self) -> Optional[int]:
