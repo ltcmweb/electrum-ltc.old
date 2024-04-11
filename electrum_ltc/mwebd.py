@@ -1,15 +1,51 @@
+import atexit
+from contextlib import closing
 import grpc
+import os
+from pathlib import Path
+import socket
+import subprocess
 
 from .bitcoin import is_mweb_address
+from . import constants
 from .transaction import PartialTransaction, Transaction
 from .mwebd_pb2 import CreateRequest
 from .mwebd_pb2_grpc import RpcStub
+from .util import user_dir
+
+port = None
+process = None
+
+def find_free_port():
+    global port
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('127.0.0.1', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        port = s.getsockname()[1]
+
+def start_if_needed():
+    global process
+    if process is None:
+        find_free_port()
+        data_dir = user_dir()
+        network = constants.net.NET_NAME
+        if network != 'mainnet':
+            data_dir = os.path.join(data_dir, network)
+        data_dir = os.path.join(data_dir, 'mweb')
+        Path(data_dir).mkdir(parents=True, exist_ok=True)
+        args = ['mwebd', '-c', network, '-d', data_dir, '-l', str(port)]
+        process = subprocess.Popen(args, stdout=subprocess.DEVNULL)
+        def cleanup():
+            process.terminate()
+        atexit.register(cleanup)
 
 def stub():
-    return RpcStub(grpc.insecure_channel('127.0.0.1:12345'))
+    start_if_needed()
+    return RpcStub(grpc.insecure_channel(f'127.0.0.1:{port}'))
 
 def stub_async():
-    return RpcStub(grpc.aio.insecure_channel('127.0.0.1:12345'))
+    start_if_needed()
+    return RpcStub(grpc.aio.insecure_channel(f'127.0.0.1:{port}'))
 
 def create(tx, scan_secret, spend_secret, fee_estimator, *, dry_run = False):
     raw_tx = bytes.fromhex(tx.serialize_to_network(include_sigs=False))
