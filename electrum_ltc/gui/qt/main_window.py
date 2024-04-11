@@ -276,7 +276,6 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         # update fee slider in case we missed the callback
         #self.fee_slider.update()
         self.load_wallet(wallet)
-        self.mweb_height = 0
         gui_object.timer.timeout.connect(self.timer_actions)
         self.contacts.fetch_openalias(self.config)
 
@@ -854,6 +853,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
             self.mweb_height = mwebd.stub().Status(StatusRequest()).mweb_utxos_height
             needs_update |= self.mweb_height < self.network.get_server_height()
         except:
+            self.mweb_height = 0
             needs_update = True
         if self.need_update.is_set():
             self.need_update.clear()
