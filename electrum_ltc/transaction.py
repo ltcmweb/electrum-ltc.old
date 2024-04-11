@@ -223,18 +223,21 @@ class TxInput:
     nsequence: int
     witness: Optional[bytes]
     _is_coinbase_output: bool
+    _is_pegout: bool
 
     def __init__(self, *,
                  prevout: TxOutpoint,
                  script_sig: bytes = None,
                  nsequence: int = 0xffffffff - 1,
                  witness: bytes = None,
-                 is_coinbase_output: bool = False):
+                 is_coinbase_output: bool = False,
+                 is_pegout: bool = False):
         self.prevout = prevout
         self.script_sig = script_sig
         self.nsequence = nsequence
         self.witness = witness
         self._is_coinbase_output = is_coinbase_output
+        self._is_pegout = is_pegout
 
     def is_coinbase_input(self) -> bool:
         """Whether this is the input of a coinbase tx."""
@@ -246,6 +249,12 @@ class TxInput:
         """
         return self._is_coinbase_output
 
+    def is_pegout(self) -> bool:
+        """Whether the coin being spent is a pegout.
+        This matters for coin maturity.
+        """
+        return self._is_pegout
+
     def value_sats(self) -> Optional[int]:
         return None
 
@@ -254,6 +263,7 @@ class TxInput:
             'prevout_hash': self.prevout.txid.hex(),
             'prevout_n': self.prevout.out_idx,
             'coinbase': self.is_coinbase_output(),
+            'pegout': self.is_pegout(),
             'nsequence': self.nsequence,
         }
         if self.script_sig is not None:
@@ -1075,6 +1085,15 @@ class Transaction:
             assert self.inputs()[idx].prevout == prevout
         return idx
 
+    def is_hogex(self):
+        if not self.inputs() or not self.outputs():
+            return False
+        if self.inputs()[0].prevout.out_idx:
+            return False
+        witver, witprog = segwit_addr.decode_segwit_address(
+            constants.net.SEGWIT_HRP, self.outputs()[0].address)
+        return witver == 8 and len(witprog) == 32
+
 
 def convert_raw_tx_to_hex(raw: Union[str, bytes]) -> str:
     """Sanitizes tx-describing input (hex/base43/base64) into
@@ -1310,7 +1329,8 @@ class PartialTxInput(TxInput, PSBTSection):
                              script_sig=None if strip_witness else txin.script_sig,
                              nsequence=txin.nsequence,
                              witness=None if strip_witness else txin.witness,
-                             is_coinbase_output=txin.is_coinbase_output())
+                             is_coinbase_output=txin.is_coinbase_output(),
+                             is_pegout=txin.is_pegout())
         return res
 
     def validate_data(self, *, for_signing=False) -> None:
