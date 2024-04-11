@@ -5,14 +5,16 @@ import os
 from pathlib import Path
 import socket
 import subprocess
+import threading
 
 from .bitcoin import is_mweb_address
 from . import constants
 from .transaction import PartialTransaction, Transaction
-from .mwebd_pb2 import CreateRequest
+from .mwebd_pb2 import CreateRequest, StatusRequest
 from .mwebd_pb2_grpc import RpcStub
 from .util import user_dir
 
+lock = threading.Lock()
 port = None
 process = None
 
@@ -24,6 +26,9 @@ def find_free_port():
         port = s.getsockname()[1]
 
 def start_if_needed():
+    with lock: _start_if_needed()
+
+def _start_if_needed():
     global process
     if process is None:
         find_free_port()
@@ -38,6 +43,12 @@ def start_if_needed():
         def cleanup():
             process.terminate()
         atexit.register(cleanup)
+
+        while True:
+            try:
+                RpcStub(grpc.insecure_channel(f'127.0.0.1:{port}')).Status(StatusRequest())
+                break
+            except: ()
 
 def stub():
     start_if_needed()
