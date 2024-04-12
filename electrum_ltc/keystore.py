@@ -201,9 +201,10 @@ class Software_KeyStore(KeyStore):
         self.pw_hash_version = d.get('pw_hash_version', 1)
         if self.pw_hash_version not in SUPPORTED_PW_HASH_VERSIONS:
             raise UnsupportedPasswordHashVersion(self.pw_hash_version)
+        self._may_have_password = True
 
     def may_have_password(self):
-        return not self.is_watching_only()
+        return not self.is_watching_only() and self._may_have_password
 
     def sign_message(self, sequence, message, password, *, script_type=None) -> bytes:
         privkey, compressed = self.get_private_key(sequence, password)
@@ -971,6 +972,7 @@ def from_bip43_rootseed(root_seed, derivation, xtype=None):
     if xtype is None:
         xtype = xtype_from_derivation(derivation)
     k.add_xprv_from_seed(root_seed, xtype, derivation)
+    if xtype == 'mweb': k._may_have_password = False
     return k
 
 
@@ -1112,6 +1114,7 @@ def from_seed(seed, passphrase, is_p2sh=False):
         elif t == 'mweb':
             der = "m/1000'/"
             xtype = 'mweb'
+            keystore._may_have_password = False
         else:
             der = "m/1'/" if is_p2sh else "m/0'/"
             xtype = 'p2wsh' if is_p2sh else 'p2wpkh'
