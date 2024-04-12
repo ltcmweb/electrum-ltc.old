@@ -848,17 +848,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.receive_tab.request_list.refresh_all()
         self.send_tab.invoice_list.refresh_all()
         # Note this runs in the GUI thread
-        try:
-            needs_update = self.mweb_height < self.network.get_server_height()
-            self.mweb_height = mwebd.stub().Status(StatusRequest()).mweb_utxos_height
-            needs_update |= self.mweb_height < self.network.get_server_height()
-        except:
-            self.mweb_height = 0
-            needs_update = True
         if self.need_update.is_set():
             self.need_update.clear()
             self.update_wallet()
-        elif not self.wallet.is_up_to_date() or needs_update:
+        else:
             # this updates "synchronizing" progress
             self.update_status()
         # resolve aliases
