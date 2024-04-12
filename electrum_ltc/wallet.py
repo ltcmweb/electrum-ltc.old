@@ -1705,10 +1705,8 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             tx = set_output_values()
             _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, fee_estimator, dry_run=True)
             amount -= fee_increase
-            tx2 = set_output_values()
-            tx, _ = mwebd.create(tx2, scan_secret, spend_secret, fee_estimator)
-            tx._trusted_input_value = tx2.input_value()
-            tx._trusted_output_value = tx2.output_value()
+            tx = set_output_values()
+            tx, _ = mwebd.create(tx, scan_secret, spend_secret, fee_estimator)
 
         # Timelock tx to current height.
         tx.locktime = get_locktime_for_new_transaction(self.network)

@@ -320,8 +320,10 @@ class CoinChooserBase(Logger):
                     txout.value -= ceil(txout.value / sum_change * fee_increase)
                     if txout.value < 0: txout.value = 0
             tx, _ = mwebd.create(tx, scan_secret, spend_secret, fee_estimator_vb, dry_run=dry_run)
-            tx.add_outputs([x for x in canonical_change if x.value >= dust_threshold])
-            return tx, [x for x in change if x not in canonical_change or x.value >= dust_threshold]
+            change_added_back = [x for x in canonical_change if x.value >= dust_threshold]
+            tx.add_outputs(change_added_back)
+            tx._trusted_output_value += sum([x.value for x in change_added_back])
+            return tx, [x for x in change if x not in canonical_change or x in change_added_back]
 
         def sufficient_funds(buckets, *, bucket_value_sum):
             '''Given a list of buckets, return True if it has enough
