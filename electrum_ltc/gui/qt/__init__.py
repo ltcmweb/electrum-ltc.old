@@ -133,7 +133,7 @@ class ElectrumGui(BaseElectrumGui, Logger):
         # timer
         self.timer = QTimer(self.app)
         self.timer.setSingleShot(False)
-        self.timer.setInterval(500)  # msec
+        self.timer.setInterval(1000)  # msec
 
         self.network_dialog = None
         self.lightning_dialog = None
