@@ -2234,8 +2234,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         txin.block_height = self.adb.get_tx_height(txin.prevout.txid.hex()).height
         if txin.script_type == 'mweb':
             index = self.get_address_index(address)
-            index = index[-1] + 1 if index[-2] == 0 else 0
-            txin.prevout = TxOutpoint(txin.prevout.txid, index)
+            txin.mweb_address_index = index[-1] + 1 if index[-2] == 0 else 0
 
     def can_sign(self, tx: Transaction) -> bool:
         if not isinstance(tx, PartialTransaction):

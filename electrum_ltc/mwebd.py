@@ -8,7 +8,7 @@ import threading
 
 from .bitcoin import is_mweb_address
 from . import constants
-from .transaction import PartialTransaction, Transaction
+from .transaction import PartialTransaction, Transaction, TxInput, TxOutpoint
 from .mwebd_pb2 import CreateRequest, StatusRequest
 from .mwebd_pb2_grpc import RpcStub
 from .util import user_dir
@@ -56,7 +56,15 @@ def stub_async():
     return RpcStub(grpc.aio.insecure_channel(f'127.0.0.1:{port}'))
 
 def create(tx, scan_secret, spend_secret, fee_estimator, *, dry_run = False):
+    txins = []
+    for txin in tx.inputs():
+        if txin.mweb_output_id:
+            op = f'{txin.mweb_output_id}:{txin.mweb_address_index}'
+            txin = TxInput(prevout=TxOutpoint.from_str(op))
+        txins.append(txin)
+    tx._inputs, txins = txins, tx._inputs
     raw_tx = bytes.fromhex(tx.serialize_to_network(include_sigs=False))
+    tx._inputs = txins
     resp = stub().Create(CreateRequest(raw_tx=raw_tx,
         scan_secret=scan_secret, spend_secret=spend_secret,
         fee_rate_per_kb=fee_estimator(1000), dry_run=dry_run))

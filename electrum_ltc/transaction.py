@@ -1277,6 +1277,7 @@ class PartialTxInput(TxInput, PSBTSection):
         self._is_native_segwit = None  # type: Optional[bool]  # None means unknown
         self.witness_sizehint = None  # type: Optional[int]  # byte size of serialized complete witness, for tx size est
         self.mweb_output_id = None
+        self.mweb_address_index = None
 
     @property
     def utxo(self):
@@ -1288,7 +1289,9 @@ class PartialTxInput(TxInput, PSBTSection):
             return
         # note that tx might be a PartialTransaction
         # serialize and de-serialize tx now. this might e.g. convert a complete PartialTx to a Tx
+        tx_hash = tx.txid()
         tx = tx_from_any(str(tx))
+        tx._cached_txid = tx_hash
         # 'utxo' field in PSBT cannot be another PSBT:
         if not tx.is_complete():
             return
