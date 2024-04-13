@@ -322,7 +322,7 @@ class CoinChooserBase(Logger):
             tx, _ = mwebd.create(tx, scan_secret, spend_secret, fee_estimator_vb, dry_run=dry_run)
             change_added_back = [x for x in canonical_change if x.value >= dust_threshold]
             tx.add_outputs(change_added_back)
-            tx._trusted_output_value += sum([x.value for x in change_added_back])
+            tx._original_tx.add_outputs(change_added_back)
             return tx, [x for x in change if x not in canonical_change or x in change_added_back]
 
         def sufficient_funds(buckets, *, bucket_value_sum):

@@ -45,7 +45,7 @@ from .bip32 import BIP32Node
 from .util import profiler, to_bytes, bh2u, bfh, chunks, is_hex_str, parse_max_spend
 from .bitcoin import (TYPE_ADDRESS, TYPE_SCRIPT, hash_160,
                       hash160_to_p2sh, hash160_to_p2pkh, hash_to_segwit_addr,
-                      var_int, TOTAL_COIN_SUPPLY_LIMIT_IN_BTC, COIN,
+                      is_mweb_address, var_int, TOTAL_COIN_SUPPLY_LIMIT_IN_BTC, COIN,
                       int_to_hex, push_script, b58_address_to_hash160,
                       opcodes, add_number_to_script, base_decode, is_segwit_script_type,
                       base_encode, construct_witness, construct_script)
@@ -642,7 +642,6 @@ class Transaction:
 
         self._flag = None
         self._extra_bytes = b''
-        self._mweb_output_ids = {}
 
         self._cached_txid = None  # type: Optional[str]
 
@@ -780,6 +779,8 @@ class Transaction:
         # the estimation will not be precise.
         if addr is None:
             return 'p2wpkh'
+        if is_mweb_address(addr):
+            return 'mweb'
         witver, witprog = segwit_addr.decode_segwit_address(constants.net.SEGWIT_HRP, addr)
         if witprog is not None:
             return 'p2wpkh'
@@ -1169,6 +1170,7 @@ class PSBTOutputType(IntEnum):
     REDEEM_SCRIPT = 0
     WITNESS_SCRIPT = 1
     BIP32_DERIVATION = 2
+    MWEB_OUTPUT_ID = 1000
 
 
 # Serialization/deserialization tools
@@ -1632,7 +1634,6 @@ class PartialTxOutput(TxOutput, PSBTSection):
         self.pubkeys = []  # type: List[bytes]  # note: order matters
         self.is_mine = False  # type: bool  # whether the wallet considers the output to be ismine
         self.is_change = False  # type: bool  # whether the wallet considers the output to be change
-        self.mweb_output_id = ''
 
     def to_json(self):
         d = super().to_json()
@@ -1673,6 +1674,8 @@ class PartialTxOutput(TxOutput, PSBTSection):
             if len(key) not in (33, 65):  # TODO also allow 32? one of the tests in the BIP is "supposed to" fail with len==32...
                 raise SerializationError(f"key for {repr(kt)} has unexpected length: {len(key)}")
             self.bip32_paths[key] = unpack_bip32_root_fingerprint_and_int_path(val)
+        elif kt == PSBTOutputType.MWEB_OUTPUT_ID:
+            self.mweb_output_id = val.hex()
         else:
             full_key = self.get_fullkey_from_keytype_and_key(kt, key)
             if full_key in self._unknown:
@@ -1687,6 +1690,8 @@ class PartialTxOutput(TxOutput, PSBTSection):
         for k in sorted(self.bip32_paths):
             packed_path = pack_bip32_root_fingerprint_and_int_path(*self.bip32_paths[k])
             wr(PSBTOutputType.BIP32_DERIVATION, packed_path, k)
+        if self.mweb_output_id:
+            wr(PSBTOutputType.MWEB_OUTPUT_ID, bfh(self.mweb_output_id))
         for full_key, val in sorted(self._unknown.items()):
             key_type, key = self.get_keytype_and_key_from_fullkey(full_key)
             wr(key_type, val, key=key)
@@ -1711,8 +1716,7 @@ class PartialTransaction(Transaction):
         self._inputs = []  # type: List[PartialTxInput]
         self._outputs = []  # type: List[PartialTxOutput]
         self._unknown = {}  # type: Dict[bytes, bytes]
-        self._trusted_input_value = None  # type: Optional[int]
-        self._trusted_output_value = None  # type: Optional[int]
+        self._original_tx = None
 
     def to_json(self) -> dict:
         d = super().to_json()
@@ -1941,16 +1945,16 @@ class PartialTransaction(Transaction):
         self.invalidate_ser_cache()
 
     def input_value(self) -> int:
-        if self._trusted_input_value is not None:
-            return self._trusted_input_value
+        if self._original_tx is not None:
+            return self._original_tx.input_value()
         input_values = [txin.value_sats() for txin in self.inputs()]
         if any([val is None for val in input_values]):
             raise MissingTxInputAmount()
         return sum(input_values)
 
     def output_value(self) -> int:
-        if self._trusted_output_value is not None:
-            return self._trusted_output_value
+        if self._original_tx is not None:
+            return self._original_tx.output_value()
         return sum(o.value for o in self.outputs())
 
     def get_fee(self) -> Optional[int]:

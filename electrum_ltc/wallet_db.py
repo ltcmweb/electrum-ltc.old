@@ -1206,8 +1206,6 @@ class WalletDB(JsonDB):
         tx = tx_from_any(str(tx))
         if not tx_hash:
             raise Exception("trying to add tx to db without txid")
-        if tx_hash != tx.txid():
-            raise Exception(f"trying to add tx to db with inconsistent txid: {tx_hash} != {tx.txid()}")
         # don't allow overwriting complete tx with partial tx
         tx_we_already_have = self.transactions.get(tx_hash, None)
         if tx_we_already_have is None or isinstance(tx_we_already_have, PartialTransaction):
@@ -1223,7 +1221,9 @@ class WalletDB(JsonDB):
         if tx_hash is None:
             return None
         assert isinstance(tx_hash, str)
-        return self.transactions.get(tx_hash)
+        tx = self.transactions.get(tx_hash)
+        if tx: tx._cached_txid = tx_hash
+        return tx
 
     @locked
     def list_transactions(self) -> Sequence[str]:

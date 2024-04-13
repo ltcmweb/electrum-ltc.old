@@ -1,4 +1,3 @@
-import atexit
 from contextlib import closing
 import grpc
 import os
@@ -38,11 +37,9 @@ def _start_if_needed():
             data_dir = os.path.join(data_dir, network)
         data_dir = os.path.join(data_dir, 'mweb')
         Path(data_dir).mkdir(parents=True, exist_ok=True)
-        args = ['mwebd', '-c', network, '-d', data_dir, '-l', str(port)]
+        args = ['mwebd', '-c', network, '-d', data_dir,
+                '-l', str(port), '-ppid', str(os.getpid())]
         process = subprocess.Popen(args, stdout=subprocess.DEVNULL)
-        def cleanup():
-            process.terminate()
-        atexit.register(cleanup)
 
         while True:
             try:
@@ -73,7 +70,6 @@ def create(tx, scan_secret, spend_secret, fee_estimator, *, dry_run = False):
     if expected_pegin: fee_increase += fee_estimator(41)
     for txout in tx.outputs():
         if is_mweb_address(txout.address) and not dry_run:
-            tx2._mweb_output_ids[resp.output_id.pop(0)] = txout
-    tx2._trusted_input_value = tx.input_value()
-    tx2._trusted_output_value = tx.output_value()
+            txout.mweb_output_id = resp.output_id.pop(0)
+    tx2._original_tx = tx
     return tx2, fee_increase

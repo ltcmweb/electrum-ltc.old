@@ -259,14 +259,21 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
             return
         if is_send:
             self.save_pending_invoice()
+            mweb_output_ids = []
+            if tx._original_tx:
+                for txout in tx._original_tx.outputs():
+                    if txout.mweb_output_id:
+                        mweb_output_ids.append(txout.mweb_output_id)
             def broadcast_done(success):
-                if not success: return
-                for output_id, txout in tx._mweb_output_ids.items():
-                    self.wallet.db.add_prevout_by_scripthash(
-                        script_to_scripthash(txout.scriptpubkey.hex()),
-                        prevout=TxOutpoint(bytes.fromhex(output_id), 0), value=txout.value)
+                if success and tx._original_tx:
+                    tx._original_tx._cached_txid = tx.txid()
+                    self.wallet.adb.add_transaction(tx._original_tx)
+                with self.wallet.lock:
+                    self.wallet._pending_mweb_output_ids.difference_update(mweb_output_ids)
             def sign_done(success):
                 if success:
+                    with self.wallet.lock:
+                        self.wallet._pending_mweb_output_ids.update(mweb_output_ids)
                     self.window.broadcast_or_show(tx, callback=broadcast_done)
             self.window.sign_tx_with_password(
                 tx,

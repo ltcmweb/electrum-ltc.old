@@ -360,6 +360,8 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         self.test_addresses_sanity()
         self.register_callbacks()
 
+        self._pending_mweb_output_ids = set()
+
     def _init_lnworker(self):
         self.lnworker = None
 
@@ -3482,18 +3484,33 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
     async def subscribe_mweb_utxos(self, scan_secret):
         stub = mwebd.stub_async()
         async for utxo in stub.Utxos(UtxosRequest(scan_secret=scan_secret)):
-            tx = Transaction(None)
-            tx._inputs = []
-            tx._outputs = [TxOutput.from_address_and_value(utxo.address, utxo.value)]
-            tx._outputs[0].mweb_output_id = utxo.output_id
+            while True:
+                with self.lock:
+                    if utxo.output_id not in self._pending_mweb_output_ids:
+                        break
+                await asyncio.sleep(0.1)
+            exists = False
+            scripthash = bitcoin.address_to_scripthash(utxo.address)
+            for prevout, v in self.db.get_prevouts_by_scripthash(scripthash):
+                if v == utxo.value:
+                    tx = self.db.get_transaction(prevout.txid.hex())
+                    txout = tx.outputs()[prevout.out_idx]
+                    if txout.mweb_output_id == utxo.output_id:
+                        exists = True
+                        break
+            if not exists:
+                tx = Transaction(None)
+                tx._inputs = []
+                tx._outputs = [TxOutput.from_address_and_value(utxo.address, utxo.value)]
+                tx._outputs[0].mweb_output_id = utxo.output_id
             hist = dict(self.adb.db.get_addr_history(utxo.address))
             hist[tx.txid()] = utxo.height
             self.adb.db.set_addr_history(utxo.address, list(hist.items()))
-            await self._add_transaction(tx, utxo.height)
+            await self._add_transaction(tx, utxo.height, exists)
 
-    async def _add_transaction(self, tx, height):
+    async def _add_transaction(self, tx, height, exists = False):
         self.adb.add_unverified_or_unconfirmed_tx(tx.txid(), height)
-        self.adb.add_transaction(tx, allow_unrelated=True)
+        if not exists: self.adb.add_transaction(tx, allow_unrelated=True)
         self.adb.set_up_to_date(True)
         if height > 0:
             await self.taskgroup.spawn(self._add_verified_tx, tx.txid(), height)
