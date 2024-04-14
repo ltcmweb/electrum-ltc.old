@@ -12,6 +12,7 @@ ENV LC_ALL=C.UTF-8 LANG=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN dpkg --add-architecture i386 && \
+    dpkg --add-architecture amd64 && \
     apt-get update -q && \
     apt-get install -qy \
         wget \

@@ -91,6 +91,8 @@ info "Building PyInstaller."
     pushd bootloader
     # cross-compile to Windows using host python
     python3 ./waf all CC="${GCC_TRIPLET_HOST}-gcc" \
+                      AR="${GCC_TRIPLET_HOST}-ar" \
+                      STRIP="${GCC_TRIPLET_HOST}-strip" \
                       CFLAGS="-static"
     popd
     # sanity check bootloader is there:
