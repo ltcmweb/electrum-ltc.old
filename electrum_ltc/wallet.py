@@ -1104,12 +1104,24 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                               header_hash=hash_header(header))
         self.adb.add_verified_tx(txid, tx_info)
 
-    async def _check_mweb_output_id(self, txid):
+    async def _check_mweb_prevout(self, prevout):
+        output_id, target = [], set()
+        tx = self.db.get_transaction(prevout.txid.hex())
+        txout = tx.outputs()[prevout.out_idx]
+        if txout.mweb_output_id:
+            output_id.append(txout.mweb_output_id)
+        for txin in tx.inputs():
+            tx = self.db.get_transaction(txin.prevout.txid.hex())
+            txout = tx.outputs()[txin.prevout.out_idx]
+            if txout.mweb_output_id:
+                output_id.append(txout.mweb_output_id)
+                target.add(txout.mweb_output_id)
+        if not output_id: return
         stub = mwebd.stub_async()
-        resp = await stub.Spent(SpentRequest(output_id=[txid]))
-        if not resp.output_id:
+        resp = await stub.Spent(SpentRequest(output_id=output_id))
+        if set(resp.output_id) == target:
             resp = await stub.Status(StatusRequest())
-            await self._add_verified_tx(txid, resp.mweb_utxos_height)
+            await self._add_verified_tx(prevout.txid.hex(), resp.mweb_utxos_height)
 
     def _is_onchain_invoice_paid(self, invoice: Invoice) -> Tuple[bool, Optional[int], Sequence[str]]:
         """Returns whether on-chain invoice/request is satisfied, num confs required txs have,
@@ -1121,7 +1133,6 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         invoice_amounts = defaultdict(int)  # type: Dict[bytes, int]  # scriptpubkey -> value_sats
         for txo in outputs:  # type: PartialTxOutput
             invoice_amounts[txo.scriptpubkey] += 1 if parse_max_spend(txo.value) else txo.value
-            self.adb.add_address(txo.address)
         relevant_txs = set()
         is_paid = True
         conf_needed = None  # type: Optional[int]
@@ -1137,8 +1148,8 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                         continue
                     confs_and_values.append((tx_height.conf or 0, v))
                     if not tx_height.conf and self.network:
-                        asyncio.run_coroutine_threadsafe(self._check_mweb_output_id(
-                            prevout.txid.hex()), self.network.asyncio_loop)
+                        asyncio.run_coroutine_threadsafe(self._check_mweb_prevout(prevout),
+                                                         self.network.asyncio_loop)
                 # check that there is at least one TXO, and that they pay enough.
                 # note: "at least one TXO" check is needed for zero amount invoice (e.g. OP_RETURN)
                 vsum = 0
@@ -2233,6 +2244,8 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         self._add_input_sig_info(txin, address, only_der_suffix=only_der_suffix)
         txin.block_height = self.adb.get_tx_height(txin.prevout.txid.hex()).height
         if txin.script_type == 'mweb':
+            d = self.db.get_txo_addr(txin.prevout.txid.hex(), address)
+            v, cb, po, txin.mweb_output_id = d[txin.prevout.out_idx]
             index = self.get_address_index(address)
             txin.mweb_address_index = index[-1] + 1 if index[-2] == 0 else 0
 
@@ -3505,11 +3518,11 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
             hist = dict(self.adb.db.get_addr_history(utxo.address))
             hist[tx.txid()] = utxo.height
             self.adb.db.set_addr_history(utxo.address, list(hist.items()))
-            await self._add_transaction(tx, utxo.height, exists)
+            await self._add_transaction(tx, utxo.height)
 
-    async def _add_transaction(self, tx, height, exists = False):
+    async def _add_transaction(self, tx, height):
         self.adb.add_unverified_or_unconfirmed_tx(tx.txid(), height)
-        if not exists: self.adb.add_transaction(tx, allow_unrelated=True)
+        self.adb.add_transaction(tx, allow_unrelated=True)
         self.adb.set_up_to_date(True)
         if height > 0:
             await self.taskgroup.spawn(self._add_verified_tx, tx.txid(), height)

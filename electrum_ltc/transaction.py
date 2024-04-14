@@ -1520,6 +1520,8 @@ class PartialTxInput(TxInput, PSBTSection):
             return s >= 1
         if self.script_type in ('p2sh', 'p2wsh', 'p2wsh-p2sh'):
             return s >= self.num_sig
+        if self.script_type == 'mweb':
+            return self.mweb_output_id and self.mweb_address_index is not None
         return False
 
     def finalize(self) -> None:

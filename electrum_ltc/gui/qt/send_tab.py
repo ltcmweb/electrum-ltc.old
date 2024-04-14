@@ -13,14 +13,13 @@ from PyQt5.QtWidgets import (QLabel, QVBoxLayout, QGridLayout,
 
 from electrum_ltc import util, paymentrequest
 from electrum_ltc import lnutil
-from electrum_ltc.bitcoin import script_to_scripthash
 from electrum_ltc.plugin import run_hook
 from electrum_ltc.i18n import _
 from electrum_ltc.util import (get_asyncio_loop, bh2u, FailedToParsePaymentIdentifier,
                                InvalidBitcoinURI, maybe_extract_lightning_payment_identifier, NotEnoughFunds,
                                NoDynamicFeeEstimates, InvoiceError, parse_max_spend)
 from electrum_ltc.invoices import PR_PAID, Invoice
-from electrum_ltc.transaction import Transaction, PartialTxInput, PartialTransaction, PartialTxOutput, TxOutpoint
+from electrum_ltc.transaction import Transaction, PartialTxInput, PartialTransaction, PartialTxOutput
 from electrum_ltc.network import TxBroadcastError, BestEffortRequestFailed
 from electrum_ltc.logging import Logger
 from electrum_ltc.lnaddr import lndecode, LnInvoiceException
@@ -267,7 +266,9 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
             def broadcast_done(success):
                 if success and tx._original_tx:
                     tx._original_tx._cached_txid = tx.txid()
+                    self.wallet.adb.add_unverified_or_unconfirmed_tx(tx.txid(), 0)
                     self.wallet.adb.add_transaction(tx._original_tx)
+                    self.wallet.adb.set_up_to_date(True)
                 with self.wallet.lock:
                     self.wallet._pending_mweb_output_ids.difference_update(mweb_output_ids)
             def sign_done(success):
