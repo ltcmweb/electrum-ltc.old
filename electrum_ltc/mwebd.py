@@ -37,8 +37,7 @@ def _start_if_needed():
             data_dir = os.path.join(data_dir, network)
         data_dir = os.path.join(data_dir, 'mweb')
         Path(data_dir).mkdir(parents=True, exist_ok=True)
-        args = ['./mwebd', '-c', network, '-d', data_dir,
-                '-l', str(port), '-ppid', str(os.getpid())]
+        args = ['./mwebd', '-c', network, '-d', data_dir, '-l', str(port)]
         process = subprocess.Popen(args, stdout=subprocess.DEVNULL)
 
         while True:
