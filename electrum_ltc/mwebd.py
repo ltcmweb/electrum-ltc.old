@@ -1,6 +1,5 @@
 from contextlib import closing
 import grpc
-import os
 from pathlib import Path
 import socket
 import subprocess
@@ -31,13 +30,15 @@ def _start_if_needed():
     global process
     if process is None:
         find_free_port()
-        data_dir = user_dir()
+        bin = Path(__file__).resolve().parent.parent / 'mwebd'
+        data_dir = Path(user_dir())
         network = constants.net.NET_NAME
         if network != 'mainnet':
-            data_dir = os.path.join(data_dir, network)
-        data_dir = os.path.join(data_dir, 'mweb')
-        Path(data_dir).mkdir(parents=True, exist_ok=True)
-        args = ['./mwebd', '-c', network, '-d', data_dir, '-l', str(port)]
+            data_dir = data_dir / network
+        data_dir = data_dir / 'mweb'
+        data_dir.mkdir(parents=True, exist_ok=True)
+        args = [bin, '-c', network, '-d', data_dir, '-l', port]
+        args = list(map(str, args))
         process = subprocess.Popen(args, stdout=subprocess.DEVNULL)
 
         while True:
