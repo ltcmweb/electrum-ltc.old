@@ -313,6 +313,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
 
         self.config = config
         assert self.config is not None, "config must not be None"
+        mwebd.set_data_dir(config.path)
         self.db = db
         self.storage = storage
         # load addresses needs to be called before constructor for sanity checks

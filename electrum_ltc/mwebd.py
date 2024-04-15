@@ -10,11 +10,17 @@ from . import constants
 from .transaction import PartialTransaction, Transaction, TxInput, TxOutpoint
 from .mwebd_pb2 import CreateRequest, StatusRequest
 from .mwebd_pb2_grpc import RpcStub
-from .util import user_dir
 
+data_dir = None
 lock = threading.Lock()
 port = None
 process = None
+
+def set_data_dir(dir):
+    global data_dir
+    with lock:
+        data_dir = Path(dir) / 'mweb'
+        data_dir.mkdir(exist_ok=True)
 
 def find_free_port():
     global port
@@ -31,12 +37,7 @@ def _start_if_needed():
     if process is None:
         find_free_port()
         bin = Path(__file__).resolve().parent.parent / 'mwebd'
-        data_dir = Path(user_dir())
         network = constants.net.NET_NAME
-        if network != 'mainnet':
-            data_dir = data_dir / network
-        data_dir = data_dir / 'mweb'
-        data_dir.mkdir(parents=True, exist_ok=True)
         args = [bin, '-c', network, '-d', data_dir, '-l', port]
         args = list(map(str, args))
         process = subprocess.Popen(args, stdout=subprocess.DEVNULL)
