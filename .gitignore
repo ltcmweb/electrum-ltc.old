@@ -54,3 +54,4 @@ electrum_ltc/*.so.0
 electrum_ltc/*.dll
 electrum_ltc/*.dylib
 contrib/osx/*.dylib
+/mwebd*
