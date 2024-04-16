@@ -1107,15 +1107,17 @@ class Abstract_Wallet(ABC, Logger, EventListener):
 
     async def _check_mweb_prevout(self, prevout):
         output_id, target = [], set()
-        tx = self.db.get_transaction(prevout.txid.hex())
+        tx_hash = prevout.txid.hex()
+        tx = self.db.get_transaction(tx_hash)
         txout = tx.outputs()[prevout.out_idx]
         if txout.mweb_output_id:
             output_id.append(txout.mweb_output_id)
-            if self.db.get_spent_outpoint(prevout.txid.hex(), prevout.out_idx):
+            spending_tx_hash = self.db.get_spent_outpoint(tx_hash, prevout.out_idx)
+            if spending_tx_hash and self.adb.get_tx_height(spending_tx_hash).conf:
                 target.add(txout.mweb_output_id)
         for txin in tx.inputs():
-            tx = self.db.get_transaction(txin.prevout.txid.hex())
-            txout = tx.outputs()[txin.prevout.out_idx]
+            tx2 = self.db.get_transaction(txin.prevout.txid.hex())
+            txout = tx2.outputs()[txin.prevout.out_idx]
             if txout.mweb_output_id:
                 output_id.append(txout.mweb_output_id)
                 target.add(txout.mweb_output_id)
@@ -1124,7 +1126,13 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         resp = await stub.Spent(SpentRequest(output_id=output_id))
         if set(resp.output_id) == target:
             resp = await stub.Status(StatusRequest())
-            await self._add_verified_tx(prevout.txid.hex(), resp.mweb_utxos_height)
+            height = resp.mweb_utxos_height
+            for txout in tx.outputs():
+                if self.db.is_addr_in_history(txout.address):
+                    hist = dict(self.db.get_addr_history(txout.address))
+                    hist[tx_hash] = height
+                    self.db.set_addr_history(txout.address, list(hist.items()))
+            await self._add_verified_tx(tx_hash, height)
 
     def _is_onchain_invoice_paid(self, invoice: Invoice) -> Tuple[bool, Optional[int], Sequence[str]]:
         """Returns whether on-chain invoice/request is satisfied, num confs required txs have,
@@ -3482,9 +3490,9 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
                               for x in resp.output_id]
                 tx._outputs = []
                 for address in [utxos[x].address for x in resp.output_id]:
-                    hist = dict(self.adb.db.get_addr_history(address))
+                    hist = dict(self.db.get_addr_history(address))
                     hist[tx.txid()] = height
-                    self.adb.db.set_addr_history(address, list(hist.items()))
+                    self.db.set_addr_history(address, list(hist.items()))
                 asyncio.run_coroutine_threadsafe(self._add_transaction(tx, height),
                                                  self.network.asyncio_loop)
         return Deterministic_Wallet.synchronize(self)
@@ -3518,9 +3526,9 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
                 tx._inputs = []
                 tx._outputs = [TxOutput.from_address_and_value(utxo.address, utxo.value)]
                 tx._outputs[0].mweb_output_id = utxo.output_id
-            hist = dict(self.adb.db.get_addr_history(utxo.address))
+            hist = dict(self.db.get_addr_history(utxo.address))
             hist[tx.txid()] = utxo.height
-            self.adb.db.set_addr_history(utxo.address, list(hist.items()))
+            self.db.set_addr_history(utxo.address, list(hist.items()))
             await self._add_transaction(tx, utxo.height)
 
     async def _add_transaction(self, tx, height):
