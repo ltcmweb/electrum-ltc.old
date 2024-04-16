@@ -1111,6 +1111,8 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         txout = tx.outputs()[prevout.out_idx]
         if txout.mweb_output_id:
             output_id.append(txout.mweb_output_id)
+            if self.db.get_spent_outpoint(prevout.txid.hex(), prevout.out_idx):
+                target.add(txout.mweb_output_id)
         for txin in tx.inputs():
             tx = self.db.get_transaction(txin.prevout.txid.hex())
             txout = tx.outputs()[txin.prevout.out_idx]
