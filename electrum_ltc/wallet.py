@@ -1831,7 +1831,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             self.db.put('reserved_addresses', list(self._reserved_addresses))
 
     def can_export(self):
-        return not self.is_watching_only() and hasattr(self.keystore, 'get_private_key')
+        return not self.is_watching_only() and hasattr(self.keystore, 'get_private_key') and self.txin_type != 'mweb'
 
     def bump_fee(
             self,
@@ -2958,7 +2958,7 @@ class Simple_Wallet(Abstract_Wallet):
 
     def get_redeem_script(self, address: str) -> Optional[str]:
         txin_type = self.get_txin_type(address)
-        if txin_type in ('p2pkh', 'p2wpkh', 'p2pk'):
+        if txin_type in ('p2pkh', 'p2wpkh', 'p2pk', 'mweb'):
             return None
         if txin_type == 'p2wpkh-p2sh':
             pubkey = self.get_public_key(address)
