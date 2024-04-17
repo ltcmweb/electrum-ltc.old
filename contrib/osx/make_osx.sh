@@ -177,10 +177,11 @@ info "generating locale"
     "$CONTRIB/build_locale.sh" "$CONTRIB/deterministic-build/electrum-ltc-locale/locale/" "$LOCALE"
 ) || fail "failed generating locale"
 
+export CC="clang --target=x86_64-apple-darwin"
 
 if [ ! -f "$DLL_TARGET_DIR/libsecp256k1.0.dylib" ]; then
     info "Building libsecp256k1 dylib..."
-    CC="clang --target=x86_64-apple-darwin" "$CONTRIB"/make_libsecp256k1.sh || fail "Could not build libsecp"
+    "$CONTRIB"/make_libsecp256k1.sh || fail "Could not build libsecp"
 else
     info "Skipping libsecp256k1 build: reusing already built dylib."
 fi
