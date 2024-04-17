@@ -57,6 +57,7 @@ info "Building $pkgname..."
             # macos target
             AUTOCONF_FLAGS="$AUTOCONF_FLAGS \
                 --with-x=no \
+                --with-xshm=no \
                 --enable-video=no \
                 --with-jpeg=no"
         else

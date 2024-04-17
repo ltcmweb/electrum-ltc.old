@@ -36,7 +36,7 @@ def _start_if_needed():
     global process
     if process is None:
         find_free_port()
-        bin = Path(__file__).resolve().parent.parent / 'mwebd'
+        bin = Path(__file__).parent.parent.resolve() / 'mwebd'
         network = constants.net.NET_NAME
         args = [bin, '-c', network, '-d', data_dir, '-l', port]
         args = list(map(str, args))

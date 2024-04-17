@@ -78,6 +78,13 @@ echo "167c4e2d9f172a617ba6f3b08783cf376dec429386378066eb2f865c98030dd7  $CACHEDI
 sudo installer -pkg "$CACHEDIR/$PKG_FILE" -target / \
     || fail "failed to install python"
 
+# create a fresh virtualenv
+# This helps to avoid older versions of pip-installed dependencies interfering with the build.
+VENV_DIR="$CONTRIB_OSX/build-venv"
+rm -rf "$VENV_DIR"
+python${PY_VER_MAJOR} -m venv $VENV_DIR
+source $VENV_DIR/bin/activate
+
 # sanity check "python3" has the version we just installed.
 FOUND_PY_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')
 if [[ "$FOUND_PY_VERSION" != "$PYTHON_VERSION" ]]; then
@@ -85,13 +92,6 @@ if [[ "$FOUND_PY_VERSION" != "$PYTHON_VERSION" ]]; then
 fi
 
 break_legacy_easy_install
-
-# create a fresh virtualenv
-# This helps to avoid older versions of pip-installed dependencies interfering with the build.
-VENV_DIR="$CONTRIB_OSX/build-venv"
-rm -rf "$VENV_DIR"
-python3 -m venv $VENV_DIR
-source $VENV_DIR/bin/activate
 
 # don't add debug info to compiled C files (e.g. when pip calls setuptools/wheel calls gcc)
 # see https://github.com/pypa/pip/issues/6505#issuecomment-526613584
@@ -180,7 +180,7 @@ info "generating locale"
 
 if [ ! -f "$DLL_TARGET_DIR/libsecp256k1.0.dylib" ]; then
     info "Building libsecp256k1 dylib..."
-    "$CONTRIB"/make_libsecp256k1.sh || fail "Could not build libsecp"
+    CC="clang --target=x86_64-apple-darwin" "$CONTRIB"/make_libsecp256k1.sh || fail "Could not build libsecp"
 else
     info "Skipping libsecp256k1 build: reusing already built dylib."
 fi
@@ -219,7 +219,7 @@ info "Installing dependencies specific to binaries..."
 brew install openssl
 export CFLAGS="-I$(brew --prefix openssl)/include $CFLAGS"
 export LDFLAGS="-L$(brew --prefix openssl)/lib $LDFLAGS"
-python3 -m pip install --no-build-isolation --no-dependencies --no-binary :all: --only-binary PyQt5,PyQt5-Qt5,cryptography,scrypt \
+python3 -m pip install --no-build-isolation --no-dependencies --no-binary :all: --only-binary PyQt5,PyQt5-Qt5,cryptography,scrypt,grpcio,protobuf \
     --no-warn-script-location \
     -Ir ./contrib/deterministic-build/requirements-binaries-mac.txt \
     || fail "Could not install dependencies specific to binaries"

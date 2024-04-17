@@ -1,3 +1,5 @@
 PyQt5>=5.15.2
+grpcio
+protobuf<5
 scrypt>=0.6.0
 cryptography>=2.6
