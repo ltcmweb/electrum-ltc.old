@@ -1658,8 +1658,10 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         else:
             raise Exception(f'Invalid argument fee: {fee}')
 
-        scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
-        spend_secret, _ = self.keystore.get_private_key([0x80000001], None)
+        scan_secret = spend_secret = bytes(32)
+        if self.txin_type == 'mweb':
+            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+            spend_secret, _ = self.keystore.get_private_key([0x80000001], None)
 
         if len(i_max) == 0:
             # Let the coin chooser select the coins to spend
