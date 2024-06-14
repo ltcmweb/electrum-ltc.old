@@ -268,7 +268,7 @@ class CoinChooserBase(Logger):
 
     def make_tx(self, *, coins: Sequence[PartialTxInput], inputs: List[PartialTxInput],
                 outputs: List[PartialTxOutput], change_addrs: Sequence[str],
-                scan_secret: bytes, spend_secret: bytes,
+                scan_secret: bytes, spend_secret: bytes, hd_path: Sequence[int],
                 fee_estimator_vb: Callable, dust_threshold: int) -> PartialTransaction:
         """Select unspent coins to spend to pay outputs.  If the change is
         greater than dust_threshold (after adding the change output to
@@ -313,13 +313,15 @@ class CoinChooserBase(Logger):
                 else:
                     txouts.append(txout)
             tx._outputs = txouts
-            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, fee_estimator_vb, dry_run=True)
+            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, hd_path,
+                                           fee_estimator_vb, dry_run=True)
             sum_change = sum([x.value for x in change])
             if fee_increase <= sum_change:
                 for txout in change:
                     txout.value -= ceil(txout.value / sum_change * fee_increase)
                     if txout.value < 0: txout.value = 0
-            tx, _ = mwebd.create(tx, scan_secret, spend_secret, fee_estimator_vb, dry_run=dry_run)
+            tx, _ = mwebd.create(tx, scan_secret, spend_secret, hd_path,
+                                 fee_estimator_vb, dry_run=dry_run)
             change_added_back = [x for x in canonical_change if x.value >= dust_threshold]
             tx.add_outputs(change_added_back)
             if tx._original_tx: tx._original_tx.add_outputs(change_added_back)

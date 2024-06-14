@@ -1659,9 +1659,14 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             raise Exception(f'Invalid argument fee: {fee}')
 
         scan_secret = spend_secret = bytes(32)
+        hd_path = convert_bip32_path_to_list_of_uint32(self.keystore.get_derivation_prefix())
         if self.txin_type == 'mweb':
-            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
-            spend_secret, _ = self.keystore.get_private_key([0x80000001], None)
+            if self.keystore.get_type_text() == 'hw[ledger]':
+                resp = mwebd.stub().LedgerKeys(LedgerKeysRequest(hd_path=hd_path))
+                scan_secret = resp.scan_secret
+            else:
+                scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+                spend_secret, _ = self.keystore.get_private_key([0x80000001], None)
 
         if len(i_max) == 0:
             # Let the coin chooser select the coins to spend
@@ -1698,6 +1703,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 change_addrs=change_addrs,
                 scan_secret=scan_secret,
                 spend_secret=spend_secret,
+                hd_path=hd_path,
                 fee_estimator_vb=fee_estimator,
                 dust_threshold=self.dust_threshold())
         else:
@@ -1729,10 +1735,11 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 return PartialTransaction.from_io(list(coins), list(outputs))
 
             tx = set_output_values()
-            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, fee_estimator, dry_run=True)
+            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, hd_path,
+                                           fee_estimator, dry_run=True)
             amount -= fee_increase
             tx = set_output_values()
-            tx, _ = mwebd.create(tx, scan_secret, spend_secret, fee_estimator)
+            tx, _ = mwebd.create(tx, scan_secret, spend_secret, hd_path, fee_estimator)
 
         # Timelock tx to current height.
         tx.locktime = get_locktime_for_new_transaction(self.network)
@@ -3520,6 +3527,7 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
     async def subscribe_mweb_utxos(self, scan_secret):
         stub = mwebd.stub_async()
         async for utxo in stub.Utxos(UtxosRequest(scan_secret=scan_secret)):
+            if utxo.address == '': continue
             while True:
                 with self.lock:
                     if utxo.output_id not in self._pending_mweb_output_ids:

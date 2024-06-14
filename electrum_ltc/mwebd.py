@@ -56,7 +56,7 @@ def stub_async():
     start_if_needed()
     return RpcStub(grpc.aio.insecure_channel(f'127.0.0.1:{port}'))
 
-def create(tx, scan_secret, spend_secret, fee_estimator, *, dry_run = False):
+def create(tx, scan_secret, spend_secret, hd_path, fee_estimator, *, dry_run = False):
     txins = []
     for txin in tx.inputs():
         if txin.mweb_output_id:
@@ -68,7 +68,8 @@ def create(tx, scan_secret, spend_secret, fee_estimator, *, dry_run = False):
     tx._inputs = txins
     resp = stub().Create(CreateRequest(raw_tx=raw_tx,
         scan_secret=scan_secret, spend_secret=spend_secret,
-        fee_rate_per_kb=fee_estimator(1000), dry_run=dry_run))
+        fee_rate_per_kb=fee_estimator(1000), dry_run=dry_run,
+        hd_path=hd_path))
     if resp.raw_tx == raw_tx: return tx, 0
     tx2 = PartialTransaction.from_tx(Transaction(resp.raw_tx))
     for i, txin in enumerate(tx2.inputs()):
