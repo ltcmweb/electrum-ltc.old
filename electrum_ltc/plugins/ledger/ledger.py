@@ -1,16 +1,18 @@
 from struct import pack, unpack
+import grpc
 import hashlib
 import sys
 import traceback
 from typing import Optional, Tuple
 
-from electrum_ltc import ecc, constants
+from electrum_ltc import ecc, constants, mwebd
 from electrum_ltc import bip32
 from electrum_ltc.crypto import hash_160
 from electrum_ltc.bitcoin import int_to_hex, var_int, is_segwit_script_type, is_b58_address
-from electrum_ltc.bip32 import BIP32Node, convert_bip32_intpath_to_strpath
+from electrum_ltc.bip32 import BIP32Node, convert_bip32_intpath_to_strpath, convert_bip32_path_to_list_of_uint32
 from electrum_ltc.i18n import _
 from electrum_ltc.keystore import Hardware_KeyStore
+from electrum_ltc.mwebd_pb2 import LedgerKeysRequest
 from electrum_ltc.transaction import Transaction, PartialTransaction, PartialTxInput, PartialTxOutput
 from electrum_ltc.wallet import Standard_Wallet
 from electrum_ltc.util import bfh, bh2u, versiontuple, UserFacingException
@@ -552,6 +554,9 @@ class Ledger_KeyStore(Hardware_KeyStore):
     @test_pin_unlocked
     @set_and_unset_signing
     def show_address(self, sequence, txin_type):
+        if txin_type == 'mweb':
+            self.show_address_mweb(sequence)
+            return
         client_ledger = self.get_client_dongle_object()
         address_path = self.get_derivation_prefix()[2:] + "/%d/%d"%sequence
         self.handler.show_message(_("Showing address ..."))
@@ -569,6 +574,26 @@ class Ledger_KeyStore(Hardware_KeyStore):
                     _('Error showing address') + ':',
                     e,
                     _('Your device might not have support for this functionality.')))
+            else:
+                self.logger.exception('')
+                self.handler.show_error(e)
+        except BaseException as e:
+            self.logger.exception('')
+            self.handler.show_error(e)
+        finally:
+            self.handler.finished()
+
+    def show_address_mweb(self, sequence):
+        self.handler.show_message(_("Showing address ..."))
+        try:
+            der_prefix = convert_bip32_path_to_list_of_uint32(self.get_derivation_prefix())
+            der_prefix.append(sequence[1] + 1)
+            mwebd.stub().LedgerKeys(LedgerKeysRequest(hd_path=der_prefix, confirm_address=True))
+        except grpc._channel._InactiveRpcError as e:
+            if e.details() == 'invalid status 6985':
+                pass
+            elif e.details() == 'invalid status 6982':
+                raise BTChipException('', 0x6982)
             else:
                 self.logger.exception('')
                 self.handler.show_error(e)
