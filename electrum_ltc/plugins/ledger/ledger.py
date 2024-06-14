@@ -227,9 +227,8 @@ class Ledger_Client(HardwareClientBase):
             try:
                 self.perform_hw1_preflight()
             except BTChipException as e:
-                if (e.sw == 0x6d00 or e.sw == 0x6700):
-                    raise UserFacingException(_("Device not in Litecoin mode")) from e
-                raise e
+                if not (e.sw == 0x6d00 or e.sw == 0x6700):
+                    raise e
             self.preflightDone = True
 
     def password_dialog(self, msg=None):
@@ -603,7 +602,7 @@ class LedgerPlugin(HW_PluginBase):
         0x40: "Ledger Nano X",
         0x50: "Ledger Nano S Plus",
     }
-    SUPPORTED_XTYPES = ('standard', 'p2wpkh-p2sh', 'p2wpkh', 'p2wsh-p2sh', 'p2wsh')
+    SUPPORTED_XTYPES = ('standard', 'p2wpkh-p2sh', 'p2wpkh', 'p2wsh-p2sh', 'p2wsh', 'mweb')
 
     def __init__(self, parent, config, name):
         self.segwit = config.get("segwit")

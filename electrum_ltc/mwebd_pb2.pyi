@@ -10,14 +10,16 @@ class StatusRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class StatusResponse(_message.Message):
-    __slots__ = ("block_header_height", "mweb_header_height", "mweb_utxos_height")
+    __slots__ = ("block_header_height", "mweb_header_height", "mweb_utxos_height", "block_time")
     BLOCK_HEADER_HEIGHT_FIELD_NUMBER: _ClassVar[int]
     MWEB_HEADER_HEIGHT_FIELD_NUMBER: _ClassVar[int]
     MWEB_UTXOS_HEIGHT_FIELD_NUMBER: _ClassVar[int]
+    BLOCK_TIME_FIELD_NUMBER: _ClassVar[int]
     block_header_height: int
     mweb_header_height: int
     mweb_utxos_height: int
-    def __init__(self, block_header_height: _Optional[int] = ..., mweb_header_height: _Optional[int] = ..., mweb_utxos_height: _Optional[int] = ...) -> None: ...
+    block_time: int
+    def __init__(self, block_header_height: _Optional[int] = ..., mweb_header_height: _Optional[int] = ..., mweb_utxos_height: _Optional[int] = ..., block_time: _Optional[int] = ...) -> None: ...
 
 class UtxosRequest(_message.Message):
     __slots__ = ("from_height", "scan_secret")
@@ -28,16 +30,18 @@ class UtxosRequest(_message.Message):
     def __init__(self, from_height: _Optional[int] = ..., scan_secret: _Optional[bytes] = ...) -> None: ...
 
 class Utxo(_message.Message):
-    __slots__ = ("height", "value", "address", "output_id")
+    __slots__ = ("height", "value", "address", "output_id", "block_time")
     HEIGHT_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
     ADDRESS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_ID_FIELD_NUMBER: _ClassVar[int]
+    BLOCK_TIME_FIELD_NUMBER: _ClassVar[int]
     height: int
     value: int
     address: str
     output_id: str
-    def __init__(self, height: _Optional[int] = ..., value: _Optional[int] = ..., address: _Optional[str] = ..., output_id: _Optional[str] = ...) -> None: ...
+    block_time: int
+    def __init__(self, height: _Optional[int] = ..., value: _Optional[int] = ..., address: _Optional[str] = ..., output_id: _Optional[str] = ..., block_time: _Optional[int] = ...) -> None: ...
 
 class AddressRequest(_message.Message):
     __slots__ = ("from_index", "to_index", "scan_secret", "spend_pubkey")
@@ -57,6 +61,22 @@ class AddressResponse(_message.Message):
     address: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, address: _Optional[_Iterable[str]] = ...) -> None: ...
 
+class LedgerKeysRequest(_message.Message):
+    __slots__ = ("hd_path", "confirm_address")
+    HD_PATH_FIELD_NUMBER: _ClassVar[int]
+    CONFIRM_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    hd_path: _containers.RepeatedScalarFieldContainer[int]
+    confirm_address: bool
+    def __init__(self, hd_path: _Optional[_Iterable[int]] = ..., confirm_address: bool = ...) -> None: ...
+
+class LedgerKeysResponse(_message.Message):
+    __slots__ = ("scan_secret", "spend_pubkey")
+    SCAN_SECRET_FIELD_NUMBER: _ClassVar[int]
+    SPEND_PUBKEY_FIELD_NUMBER: _ClassVar[int]
+    scan_secret: bytes
+    spend_pubkey: bytes
+    def __init__(self, scan_secret: _Optional[bytes] = ..., spend_pubkey: _Optional[bytes] = ...) -> None: ...
+
 class SpentRequest(_message.Message):
     __slots__ = ("output_id",)
     OUTPUT_ID_FIELD_NUMBER: _ClassVar[int]
@@ -70,18 +90,20 @@ class SpentResponse(_message.Message):
     def __init__(self, output_id: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CreateRequest(_message.Message):
-    __slots__ = ("raw_tx", "scan_secret", "spend_secret", "fee_rate_per_kb", "dry_run")
+    __slots__ = ("raw_tx", "scan_secret", "spend_secret", "fee_rate_per_kb", "dry_run", "hd_path")
     RAW_TX_FIELD_NUMBER: _ClassVar[int]
     SCAN_SECRET_FIELD_NUMBER: _ClassVar[int]
     SPEND_SECRET_FIELD_NUMBER: _ClassVar[int]
     FEE_RATE_PER_KB_FIELD_NUMBER: _ClassVar[int]
     DRY_RUN_FIELD_NUMBER: _ClassVar[int]
+    HD_PATH_FIELD_NUMBER: _ClassVar[int]
     raw_tx: bytes
     scan_secret: bytes
     spend_secret: bytes
     fee_rate_per_kb: int
     dry_run: bool
-    def __init__(self, raw_tx: _Optional[bytes] = ..., scan_secret: _Optional[bytes] = ..., spend_secret: _Optional[bytes] = ..., fee_rate_per_kb: _Optional[int] = ..., dry_run: bool = ...) -> None: ...
+    hd_path: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, raw_tx: _Optional[bytes] = ..., scan_secret: _Optional[bytes] = ..., spend_secret: _Optional[bytes] = ..., fee_rate_per_kb: _Optional[int] = ..., dry_run: bool = ..., hd_path: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class CreateResponse(_message.Message):
     __slots__ = ("raw_tx", "output_id")

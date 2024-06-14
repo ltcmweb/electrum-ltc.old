@@ -86,7 +86,7 @@ from .paymentrequest import PaymentRequest
 from .util import read_json_file, write_json_file, UserFacingException, FileImportFailed
 from .util import EventListener, event_listener
 from . import mwebd
-from .mwebd_pb2 import AddressRequest, SpentRequest, StatusRequest, UtxosRequest
+from .mwebd_pb2 import AddressRequest, LedgerKeysRequest, SpentRequest, StatusRequest, UtxosRequest
 
 if TYPE_CHECKING:
     from .network import Network
@@ -3467,8 +3467,14 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
             n += 1
         if n in self._address_cache:
             return self._address_cache[n]
-        scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
-        spend_pubkey, _ = self.keystore.get_keypair([0x80000001], None)
+        if self.keystore.get_type_text() == 'hw[ledger]':
+            der_prefix = convert_bip32_path_to_list_of_uint32(self.keystore.get_derivation_prefix())
+            resp = mwebd.stub().LedgerKeys(LedgerKeysRequest(hd_path=der_prefix))
+            scan_secret = resp.scan_secret
+            spend_pubkey = resp.spend_pubkey
+        else:
+            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+            spend_pubkey, _ = self.keystore.get_keypair([0x80000001], None)
         resp = mwebd.stub().Addresses(AddressRequest(
             from_index=n, to_index=n + (1 if for_change == 1 else 1000),
             scan_secret=scan_secret, spend_pubkey=spend_pubkey))
@@ -3502,7 +3508,12 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
     def start_network(self, network):
         Deterministic_Wallet.start_network(self, network)
         if self.txin_type == 'mweb':
-            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+            if self.keystore.get_type_text() == 'hw[ledger]':
+                der_prefix = convert_bip32_path_to_list_of_uint32(self.keystore.get_derivation_prefix())
+                resp = mwebd.stub().LedgerKeys(LedgerKeysRequest(hd_path=der_prefix))
+                scan_secret = resp.scan_secret
+            else:
+                scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
             asyncio.run_coroutine_threadsafe(self.subscribe_mweb_utxos(scan_secret),
                                              self.network.asyncio_loop)
 

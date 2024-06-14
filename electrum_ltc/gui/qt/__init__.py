@@ -31,6 +31,7 @@ import threading
 from typing import Optional, TYPE_CHECKING, List, Sequence
 
 from electrum_ltc import GuiImportError
+from electrum_ltc.bip32 import xpub_type
 
 try:
     import PyQt5
@@ -409,7 +410,21 @@ class ElectrumGui(BaseElectrumGui, Logger):
         # return if wallet creation is not complete
         if storage is None or db.get_action():
             return
+        keystore = db.get('keystore')
+        is_ledger_mweb = keystore['hw_type'] == 'ledger' and xpub_type(keystore['xpub']) == 'mweb'
+        if is_ledger_mweb:
+            devmgr = self.plugins.device_manager
+            with devmgr.lock:
+                for client in devmgr.clients:
+                    if client.get_soft_device_id() == keystore['soft_device_id']:
+                        client.close()
+            custom_message_box(icon=QMessageBox.Information,
+                               parent=None,
+                               title=_('Ledger'),
+                               text=_('Please switch to the Litecoin MWEB app on the Ledger.'))
         wallet = Wallet(db, storage, config=self.config)
+        if is_ledger_mweb:
+            wallet.keystore.can_pair = False
         wallet.start_network(self.daemon.network)
         self.daemon.add_wallet(wallet)
         return wallet

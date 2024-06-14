@@ -831,6 +831,7 @@ class Hardware_KeyStore(Xpub, KeyStore):
         self.label = d.get('label')  # type: Optional[str]
         self.soft_device_id = d.get('soft_device_id')  # type: Optional[str]
         self.handler = None  # type: Optional[HardwareHandlerBase]
+        self.can_pair = True
         run_hook('init_keystore', self)
 
     def set_label(self, label):
