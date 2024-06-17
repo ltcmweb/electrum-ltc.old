@@ -118,6 +118,7 @@ class TxEditor:
             raise
         except _InactiveRpcError as e:
             self.errored = True
+            self.tx = None
             self.main_window.show_error(str(e))
             return
         use_rbf = bool(self.config.get('use_rbf', True))
