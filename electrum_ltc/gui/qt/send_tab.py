@@ -247,7 +247,7 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
                 text = self.get_text_not_enough_funds_mentioning_frozen()
                 self.show_message(text)
                 return
-        if conf_dlg.tx is None:
+        if conf_dlg.errored:
             return
 
         # shortcut to advanced preview (after "enough funds" check!)

@@ -58,6 +58,7 @@ class TxEditor:
         self.wallet = window.wallet
         self.not_enough_funds = False
         self.no_dynfee_estimates = False
+        self.errored = False
         self.needs_update = False
         self.password_required = self.wallet.has_keystore_encryption() and not is_sweep
         self.main_window.gui_object.timer.timeout.connect(self.timer_actions)
@@ -90,6 +91,7 @@ class TxEditor:
             self.tx = self.make_tx(fee_estimator)
             self.not_enough_funds = False
             self.no_dynfee_estimates = False
+            self.errored = False
         except NotEnoughFunds:
             self.not_enough_funds = True
             self.tx = None
@@ -115,6 +117,7 @@ class TxEditor:
             self.main_window.show_error(str(e))
             raise
         except _InactiveRpcError as e:
+            self.errored = True
             self.main_window.show_error(str(e))
             return
         use_rbf = bool(self.config.get('use_rbf', True))
