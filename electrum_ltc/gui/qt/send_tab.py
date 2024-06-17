@@ -4,6 +4,7 @@
 
 import asyncio
 from decimal import Decimal
+from grpc._channel import _InactiveRpcError
 from typing import Optional, TYPE_CHECKING, Sequence, List
 from urllib.parse import urlparse
 
@@ -198,6 +199,10 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
             text = self.get_text_not_enough_funds_mentioning_frozen()
             self.show_error(text)
             return
+        except _InactiveRpcError as e:
+            self.max_button.setChecked(False)
+            self.show_error(str(e))
+            return
 
         self.max_button.setChecked(True)
         amount = tx.output_value()
@@ -242,6 +247,8 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
                 text = self.get_text_not_enough_funds_mentioning_frozen()
                 self.show_message(text)
                 return
+        if conf_dlg.tx is None:
+            return
 
         # shortcut to advanced preview (after "enough funds" check!)
         if self.config.get('advanced_preview'):

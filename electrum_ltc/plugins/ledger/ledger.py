@@ -1,5 +1,5 @@
+from grpc._channel import _InactiveRpcError
 from struct import pack, unpack
-import grpc
 import hashlib
 import sys
 import traceback
@@ -589,17 +589,17 @@ class Ledger_KeyStore(Hardware_KeyStore):
             der_prefix = convert_bip32_path_to_list_of_uint32(self.get_derivation_prefix())
             der_prefix.append(sequence[1] + 1)
             mwebd.stub().LedgerKeys(LedgerKeysRequest(hd_path=der_prefix, confirm_address=True))
-        except grpc._channel._InactiveRpcError as e:
+        except _InactiveRpcError as e:
             if e.details() == 'invalid status 6985':
                 pass
             elif e.details() == 'invalid status 6982':
                 raise BTChipException('', 0x6982)
             else:
                 self.logger.exception('')
-                self.handler.show_error(e)
+                self.handler.show_error(e, True)
         except BaseException as e:
             self.logger.exception('')
-            self.handler.show_error(e)
+            self.handler.show_error(e, True)
         finally:
             self.handler.finished()
 

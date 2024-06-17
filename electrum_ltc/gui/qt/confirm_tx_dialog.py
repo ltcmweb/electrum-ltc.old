@@ -24,6 +24,7 @@
 # SOFTWARE.
 
 from decimal import Decimal
+from grpc._channel import _InactiveRpcError
 from typing import TYPE_CHECKING, Optional, Union
 
 from PyQt5.QtCore import Qt
@@ -113,6 +114,9 @@ class TxEditor:
             self.tx = None
             self.main_window.show_error(str(e))
             raise
+        except _InactiveRpcError as e:
+            self.main_window.show_error(str(e))
+            return
         use_rbf = bool(self.config.get('use_rbf', True))
         self.tx.set_rbf(use_rbf)
 
