@@ -411,7 +411,7 @@ class ElectrumGui(BaseElectrumGui, Logger):
         if storage is None or db.get_action():
             return
         keystore = db.get('keystore')
-        is_ledger_mweb = keystore['hw_type'] == 'ledger' and xpub_type(keystore['xpub']) == 'mweb'
+        is_ledger_mweb = keystore.get('hw_type') == 'ledger' and xpub_type(keystore['xpub']) == 'mweb'
         if is_ledger_mweb:
             devmgr = self.plugins.device_manager
             with devmgr.lock:
