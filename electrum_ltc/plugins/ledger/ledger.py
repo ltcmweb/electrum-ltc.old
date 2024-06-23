@@ -476,7 +476,6 @@ class Ledger_KeyStore(Hardware_KeyStore):
             firstTransaction = True
             inputIndex = 0
             rawTx = tx.serialize_to_network()
-            client_ledger.enableAlternate2fa(False)
             if segwitTransaction:
                 client_ledger.startUntrustedTransaction(True, inputIndex,
                                                             chipInputs, redeemScripts[inputIndex], version=tx.version)
