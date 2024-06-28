@@ -418,10 +418,6 @@ class ElectrumGui(BaseElectrumGui, Logger):
                 for client in devmgr.clients:
                     if client.get_soft_device_id() == keystore['soft_device_id']:
                         client.close()
-            custom_message_box(icon=QMessageBox.Information,
-                               parent=None,
-                               title=_('Ledger'),
-                               text=_('Please switch to the Litecoin MWEB app on the Ledger.'))
         wallet = Wallet(db, storage, config=self.config)
         if is_ledger_mweb:
             wallet.keystore.can_pair = False
