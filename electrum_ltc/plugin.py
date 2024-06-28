@@ -802,7 +802,7 @@ class DeviceMgr(ThreadJob):
            and then tell the user ks1 could not be paired (and there are no devices left to try)
         """
         from .keystore import Hardware_KeyStore
-        keystores = [ks for ks in keystores if isinstance(ks, Hardware_KeyStore) and ks.can_pair]
+        keystores = [ks for ks in keystores if isinstance(ks, Hardware_KeyStore)]
         if not keystores:
             return
         if devices is None:

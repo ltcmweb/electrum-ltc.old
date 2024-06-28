@@ -880,6 +880,7 @@ class Hardware_KeyStore(Xpub, KeyStore):
             devices: Sequence['Device'] = None,
             allow_user_interaction: bool = True,
     ) -> Optional['HardwareClientBase']:
+        if not self.can_pair: return None
         return self.plugin.get_client(
             self,
             force_pair=force_pair,
