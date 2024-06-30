@@ -1278,6 +1278,7 @@ class PartialTxInput(TxInput, PSBTSection):
         self.witness_sizehint = None  # type: Optional[int]  # byte size of serialized complete witness, for tx size est
         self.mweb_output_id = None
         self.mweb_address_index = None
+        self.broadcast_tx = None
 
     @property
     def utxo(self):

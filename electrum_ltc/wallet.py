@@ -2220,6 +2220,10 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 txin.witness_utxo = TxOutput.from_address_and_value(address, txin_value)
         if txin.utxo is None:
             txin.utxo = self.get_input_tx(txin.prevout.txid.hex(), ignore_network_issues=ignore_network_issues)
+            try:
+                txin.broadcast_tx = self.network.run_from_another_thread(
+                    self.network.get_transaction(txin.prevout.txid.hex(), timeout=10))
+            except: ()
 
     def _learn_derivation_path_for_address_from_txinout(self, txinout: Union[PartialTxInput, PartialTxOutput],
                                                         address: str) -> bool:

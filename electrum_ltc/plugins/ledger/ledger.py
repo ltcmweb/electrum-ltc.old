@@ -386,7 +386,7 @@ class Ledger_KeyStore(Hardware_KeyStore):
             if txin_prev_tx is None and not txin.is_segwit():
                 raise UserFacingException(_('Missing previous tx for legacy input.'))
             txin_prev_tx_raw = txin_prev_tx.serialize() if txin_prev_tx else None
-            inputs.append([txin_prev_tx_raw,
+            inputs.append([txin.broadcast_tx or txin_prev_tx_raw,
                            txin.prevout.out_idx,
                            redeemScript,
                            txin.prevout.txid.hex(),
