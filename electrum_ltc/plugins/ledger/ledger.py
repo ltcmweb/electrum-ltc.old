@@ -145,6 +145,18 @@ class Ledger_Client(HardwareClientBase):
                          fingerprint=fingerprint_bytes,
                          child_number=childnum_bytes).to_xpub()
 
+    @runs_in_hwd_thread
+    @test_pin_unlocked
+    def get_mweb_keys(self, bip32_path):
+        self.checkDevice()
+        bip32_path = bip32.normalize_bip32_derivation(bip32_path)
+        bip32_intpath = bip32.convert_bip32_path_to_list_of_uint32(bip32_path)
+        apdu = [0xeb, 5, 0, 0, 0, len(bip32_intpath)]
+        apdu.extend(pack('>%dI' % len(bip32_intpath), *bip32_intpath))
+        apdu[4] = len(apdu) - 5
+        resp = self.dongleObject.dongle.exchange(bytearray(apdu))
+        return resp[:32].hex(), resp[32:].hex()
+
     def has_detached_pin_support(self, client: 'btchip'):
         try:
             client.getVerifyPinRemainingAttempts()
@@ -229,8 +241,9 @@ class Ledger_Client(HardwareClientBase):
             try:
                 self.perform_hw1_preflight()
             except BTChipException as e:
-                if not (e.sw == 0x6d00 or e.sw == 0x6700):
-                    raise e
+                if (e.sw == 0x6d00 or e.sw == 0x6700):
+                    raise UserFacingException(_("Device not in Litecoin mode")) from e
+                raise e
             self.preflightDone = True
 
     def password_dialog(self, msg=None):
@@ -476,6 +489,7 @@ class Ledger_KeyStore(Hardware_KeyStore):
             firstTransaction = True
             inputIndex = 0
             rawTx = tx.serialize_to_network()
+            client_ledger.enableAlternate2fa(False)
             if segwitTransaction:
                 client_ledger.startUntrustedTransaction(True, inputIndex,
                                                             chipInputs, redeemScripts[inputIndex], version=tx.version)

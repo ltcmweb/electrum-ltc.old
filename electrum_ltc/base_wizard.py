@@ -469,6 +469,9 @@ class BaseWizard(Logger):
             root_fingerprint = client.request_root_fingerprint_from_device()
             label = client.label()  # use this as device_info.label might be outdated!
             soft_device_id = client.get_soft_device_id()  # use this as device_info.device_id might be outdated!
+            scan_secret, spend_pubkey = None, None
+            if name == 'ledger' and xtype == 'mweb':
+                scan_secret, spend_pubkey = client.get_mweb_keys(derivation)
         except ScriptTypeNotSupported:
             raise  # this is handled in derivation_dialog
         except BaseException as e:
@@ -483,6 +486,8 @@ class BaseWizard(Logger):
             'xpub': xpub,
             'label': label,
             'soft_device_id': soft_device_id,
+            'mweb_scan_secret': scan_secret,
+            'mweb_spend_pubkey': spend_pubkey,
         }
         try:
             client.manipulate_keystore_dict_during_wizard_setup(d)

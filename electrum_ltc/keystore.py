@@ -830,8 +830,9 @@ class Hardware_KeyStore(Xpub, KeyStore):
         self.xpub = d.get('xpub')
         self.label = d.get('label')  # type: Optional[str]
         self.soft_device_id = d.get('soft_device_id')  # type: Optional[str]
+        self.scan_secret = d.get('mweb_scan_secret')
+        self.spend_pubkey = d.get('mweb_spend_pubkey')
         self.handler = None  # type: Optional[HardwareHandlerBase]
-        self.can_pair = True
         run_hook('init_keystore', self)
 
     def set_label(self, label):
@@ -855,6 +856,8 @@ class Hardware_KeyStore(Xpub, KeyStore):
             'root_fingerprint': self.get_root_fingerprint(),
             'label':self.label,
             'soft_device_id': self.soft_device_id,
+            'mweb_scan_secret': self.scan_secret,
+            'mweb_spend_pubkey': self.spend_pubkey,
         }
 
     def unpaired(self):
@@ -880,7 +883,6 @@ class Hardware_KeyStore(Xpub, KeyStore):
             devices: Sequence['Device'] = None,
             allow_user_interaction: bool = True,
     ) -> Optional['HardwareClientBase']:
-        if not self.can_pair: return None
         return self.plugin.get_client(
             self,
             force_pair=force_pair,

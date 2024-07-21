@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bmwebd.proto\"\x0f\n\rStatusRequest\"x\n\x0eStatusResponse\x12\x1b\n\x13\x62lock_header_height\x18\x01 \x01(\x05\x12\x1a\n\x12mweb_header_height\x18\x02 \x01(\x05\x12\x19\n\x11mweb_utxos_height\x18\x03 \x01(\x05\x12\x12\n\nblock_time\x18\x04 \x01(\r\"8\n\x0cUtxosRequest\x12\x13\n\x0b\x66rom_height\x18\x01 \x01(\x05\x12\x13\n\x0bscan_secret\x18\x02 \x01(\x0c\"]\n\x04Utxo\x12\x0e\n\x06height\x18\x01 \x01(\x05\x12\r\n\x05value\x18\x02 \x01(\x04\x12\x0f\n\x07\x61\x64\x64ress\x18\x03 \x01(\t\x12\x11\n\toutput_id\x18\x04 \x01(\t\x12\x12\n\nblock_time\x18\x05 \x01(\r\"a\n\x0e\x41\x64\x64ressRequest\x12\x12\n\nfrom_index\x18\x01 \x01(\r\x12\x10\n\x08to_index\x18\x02 \x01(\r\x12\x13\n\x0bscan_secret\x18\x03 \x01(\x0c\x12\x14\n\x0cspend_pubkey\x18\x04 \x01(\x0c\"\"\n\x0f\x41\x64\x64ressResponse\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x03(\t\"=\n\x11LedgerKeysRequest\x12\x0f\n\x07hd_path\x18\x01 \x03(\r\x12\x17\n\x0f\x63onfirm_address\x18\x02 \x01(\x08\"?\n\x12LedgerKeysResponse\x12\x13\n\x0bscan_secret\x18\x01 \x01(\x0c\x12\x14\n\x0cspend_pubkey\x18\x02 \x01(\x0c\"!\n\x0cSpentRequest\x12\x11\n\toutput_id\x18\x01 \x03(\t\"\"\n\rSpentResponse\x12\x11\n\toutput_id\x18\x01 \x03(\t\"\x85\x01\n\rCreateRequest\x12\x0e\n\x06raw_tx\x18\x01 \x01(\x0c\x12\x13\n\x0bscan_secret\x18\x02 \x01(\x0c\x12\x14\n\x0cspend_secret\x18\x03 \x01(\x0c\x12\x17\n\x0f\x66\x65\x65_rate_per_kb\x18\x04 \x01(\x04\x12\x0f\n\x07\x64ry_run\x18\x05 \x01(\x08\x12\x0f\n\x07hd_path\x18\x06 \x03(\r\"3\n\x0e\x43reateResponse\x12\x0e\n\x06raw_tx\x18\x01 \x01(\x0c\x12\x11\n\toutput_id\x18\x02 \x03(\t\"\"\n\x10\x42roadcastRequest\x12\x0e\n\x06raw_tx\x18\x01 \x01(\x0c\"!\n\x11\x42roadcastResponse\x12\x0c\n\x04txid\x18\x01 \x01(\t2\xbf\x02\n\x03Rpc\x12)\n\x06Status\x12\x0e.StatusRequest\x1a\x0f.StatusResponse\x12\x1f\n\x05Utxos\x12\r.UtxosRequest\x1a\x05.Utxo0\x01\x12.\n\tAddresses\x12\x0f.AddressRequest\x1a\x10.AddressResponse\x12\x35\n\nLedgerKeys\x12\x12.LedgerKeysRequest\x1a\x13.LedgerKeysResponse\x12&\n\x05Spent\x12\r.SpentRequest\x1a\x0e.SpentResponse\x12)\n\x06\x43reate\x12\x0e.CreateRequest\x1a\x0f.CreateResponse\x12\x32\n\tBroadcast\x12\x11.BroadcastRequest\x1a\x12.BroadcastResponseB Z\x1egithub.com/ltcmweb/mwebd/protob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bmwebd.proto\"\x0f\n\rStatusRequest\"x\n\x0eStatusResponse\x12\x1b\n\x13\x62lock_header_height\x18\x01 \x01(\x05\x12\x1a\n\x12mweb_header_height\x18\x02 \x01(\x05\x12\x19\n\x11mweb_utxos_height\x18\x03 \x01(\x05\x12\x12\n\nblock_time\x18\x04 \x01(\r\"8\n\x0cUtxosRequest\x12\x13\n\x0b\x66rom_height\x18\x01 \x01(\x05\x12\x13\n\x0bscan_secret\x18\x02 \x01(\x0c\"]\n\x04Utxo\x12\x0e\n\x06height\x18\x01 \x01(\x05\x12\r\n\x05value\x18\x02 \x01(\x04\x12\x0f\n\x07\x61\x64\x64ress\x18\x03 \x01(\t\x12\x11\n\toutput_id\x18\x04 \x01(\t\x12\x12\n\nblock_time\x18\x05 \x01(\r\"a\n\x0e\x41\x64\x64ressRequest\x12\x12\n\nfrom_index\x18\x01 \x01(\r\x12\x10\n\x08to_index\x18\x02 \x01(\r\x12\x13\n\x0bscan_secret\x18\x03 \x01(\x0c\x12\x14\n\x0cspend_pubkey\x18\x04 \x01(\x0c\"\"\n\x0f\x41\x64\x64ressResponse\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x03(\t\"=\n\x11LedgerKeysRequest\x12\x0f\n\x07hd_path\x18\x01 \x03(\r\x12\x17\n\x0f\x63onfirm_address\x18\x02 \x01(\x08\"?\n\x12LedgerKeysResponse\x12\x13\n\x0bscan_secret\x18\x01 \x01(\x0c\x12\x14\n\x0cspend_pubkey\x18\x02 \x01(\x0c\"\x1a\n\nLedgerApdu\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"!\n\x0cSpentRequest\x12\x11\n\toutput_id\x18\x01 \x03(\t\"\"\n\rSpentResponse\x12\x11\n\toutput_id\x18\x01 \x03(\t\"\x85\x01\n\rCreateRequest\x12\x0e\n\x06raw_tx\x18\x01 \x01(\x0c\x12\x13\n\x0bscan_secret\x18\x02 \x01(\x0c\x12\x14\n\x0cspend_secret\x18\x03 \x01(\x0c\x12\x17\n\x0f\x66\x65\x65_rate_per_kb\x18\x04 \x01(\x04\x12\x0f\n\x07\x64ry_run\x18\x05 \x01(\x08\x12\x0f\n\x07hd_path\x18\x06 \x03(\r\"3\n\x0e\x43reateResponse\x12\x0e\n\x06raw_tx\x18\x01 \x01(\x0c\x12\x11\n\toutput_id\x18\x02 \x03(\t\"\"\n\x10\x42roadcastRequest\x12\x0e\n\x06raw_tx\x18\x01 \x01(\x0c\"!\n\x11\x42roadcastResponse\x12\x0c\n\x04txid\x18\x01 \x01(\t2\xeb\x02\n\x03Rpc\x12)\n\x06Status\x12\x0e.StatusRequest\x1a\x0f.StatusResponse\x12\x1f\n\x05Utxos\x12\r.UtxosRequest\x1a\x05.Utxo0\x01\x12.\n\tAddresses\x12\x0f.AddressRequest\x1a\x10.AddressResponse\x12\x35\n\nLedgerKeys\x12\x12.LedgerKeysRequest\x1a\x13.LedgerKeysResponse\x12&\n\x05Spent\x12\r.SpentRequest\x1a\x0e.SpentResponse\x12)\n\x06\x43reate\x12\x0e.CreateRequest\x1a\x0f.CreateResponse\x12*\n\x0eLedgerExchange\x12\x0b.LedgerApdu\x1a\x0b.LedgerApdu\x12\x32\n\tBroadcast\x12\x11.BroadcastRequest\x1a\x12.BroadcastResponseB Z\x1egithub.com/ltcmweb/mwebd/protob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,18 +38,20 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_LEDGERKEYSREQUEST']._serialized_end=503
   _globals['_LEDGERKEYSRESPONSE']._serialized_start=505
   _globals['_LEDGERKEYSRESPONSE']._serialized_end=568
-  _globals['_SPENTREQUEST']._serialized_start=570
-  _globals['_SPENTREQUEST']._serialized_end=603
-  _globals['_SPENTRESPONSE']._serialized_start=605
-  _globals['_SPENTRESPONSE']._serialized_end=639
-  _globals['_CREATEREQUEST']._serialized_start=642
-  _globals['_CREATEREQUEST']._serialized_end=775
-  _globals['_CREATERESPONSE']._serialized_start=777
-  _globals['_CREATERESPONSE']._serialized_end=828
-  _globals['_BROADCASTREQUEST']._serialized_start=830
-  _globals['_BROADCASTREQUEST']._serialized_end=864
-  _globals['_BROADCASTRESPONSE']._serialized_start=866
-  _globals['_BROADCASTRESPONSE']._serialized_end=899
-  _globals['_RPC']._serialized_start=902
-  _globals['_RPC']._serialized_end=1221
+  _globals['_LEDGERAPDU']._serialized_start=570
+  _globals['_LEDGERAPDU']._serialized_end=596
+  _globals['_SPENTREQUEST']._serialized_start=598
+  _globals['_SPENTREQUEST']._serialized_end=631
+  _globals['_SPENTRESPONSE']._serialized_start=633
+  _globals['_SPENTRESPONSE']._serialized_end=667
+  _globals['_CREATEREQUEST']._serialized_start=670
+  _globals['_CREATEREQUEST']._serialized_end=803
+  _globals['_CREATERESPONSE']._serialized_start=805
+  _globals['_CREATERESPONSE']._serialized_end=856
+  _globals['_BROADCASTREQUEST']._serialized_start=858
+  _globals['_BROADCASTREQUEST']._serialized_end=892
+  _globals['_BROADCASTRESPONSE']._serialized_start=894
+  _globals['_BROADCASTRESPONSE']._serialized_end=927
+  _globals['_RPC']._serialized_start=930
+  _globals['_RPC']._serialized_end=1293
 # @@protoc_insertion_point(module_scope)

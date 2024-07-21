@@ -77,6 +77,12 @@ class LedgerKeysResponse(_message.Message):
     spend_pubkey: bytes
     def __init__(self, scan_secret: _Optional[bytes] = ..., spend_pubkey: _Optional[bytes] = ...) -> None: ...
 
+class LedgerApdu(_message.Message):
+    __slots__ = ("data",)
+    DATA_FIELD_NUMBER: _ClassVar[int]
+    data: bytes
+    def __init__(self, data: _Optional[bytes] = ...) -> None: ...
+
 class SpentRequest(_message.Message):
     __slots__ = ("output_id",)
     OUTPUT_ID_FIELD_NUMBER: _ClassVar[int]

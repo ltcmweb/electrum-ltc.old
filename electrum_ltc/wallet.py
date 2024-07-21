@@ -86,7 +86,7 @@ from .paymentrequest import PaymentRequest
 from .util import read_json_file, write_json_file, UserFacingException, FileImportFailed
 from .util import EventListener, event_listener
 from . import mwebd
-from .mwebd_pb2 import AddressRequest, LedgerKeysRequest, SpentRequest, StatusRequest, UtxosRequest
+from .mwebd_pb2 import AddressRequest, SpentRequest, StatusRequest, UtxosRequest
 
 if TYPE_CHECKING:
     from .network import Network
@@ -1662,8 +1662,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         hd_path = convert_bip32_path_to_list_of_uint32(self.keystore.get_derivation_prefix())
         if self.txin_type == 'mweb':
             if self.keystore.get_type_text() == 'hw[ledger]':
-                resp = mwebd.stub().LedgerKeys(LedgerKeysRequest(hd_path=hd_path))
-                scan_secret = resp.scan_secret
+                scan_secret = bytes.fromhex(self.keystore.scan_secret)
             else:
                 scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
                 spend_secret, _ = self.keystore.get_private_key([0x80000001], None)
@@ -3479,10 +3478,8 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
         if n in self._address_cache:
             return self._address_cache[n]
         if self.keystore.get_type_text() == 'hw[ledger]':
-            der_prefix = convert_bip32_path_to_list_of_uint32(self.keystore.get_derivation_prefix())
-            resp = mwebd.stub().LedgerKeys(LedgerKeysRequest(hd_path=der_prefix))
-            scan_secret = resp.scan_secret
-            spend_pubkey = resp.spend_pubkey
+            scan_secret = bytes.fromhex(self.keystore.scan_secret)
+            spend_pubkey = bytes.fromhex(self.keystore.spend_pubkey)
         else:
             scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
             spend_pubkey, _ = self.keystore.get_keypair([0x80000001], None)
@@ -3520,9 +3517,7 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
         Deterministic_Wallet.start_network(self, network)
         if self.txin_type == 'mweb':
             if self.keystore.get_type_text() == 'hw[ledger]':
-                der_prefix = convert_bip32_path_to_list_of_uint32(self.keystore.get_derivation_prefix())
-                resp = mwebd.stub().LedgerKeys(LedgerKeysRequest(hd_path=der_prefix))
-                scan_secret = resp.scan_secret
+                scan_secret = bytes.fromhex(self.keystore.scan_secret)
             else:
                 scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
             asyncio.run_coroutine_threadsafe(self.subscribe_mweb_utxos(scan_secret),

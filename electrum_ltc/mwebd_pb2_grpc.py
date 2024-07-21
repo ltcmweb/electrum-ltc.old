@@ -44,6 +44,11 @@ class RpcStub(object):
                 request_serializer=mwebd__pb2.CreateRequest.SerializeToString,
                 response_deserializer=mwebd__pb2.CreateResponse.FromString,
                 )
+        self.LedgerExchange = channel.unary_unary(
+                '/Rpc/LedgerExchange',
+                request_serializer=mwebd__pb2.LedgerApdu.SerializeToString,
+                response_deserializer=mwebd__pb2.LedgerApdu.FromString,
+                )
         self.Broadcast = channel.unary_unary(
                 '/Rpc/Broadcast',
                 request_serializer=mwebd__pb2.BroadcastRequest.SerializeToString,
@@ -104,6 +109,13 @@ class RpcServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def LedgerExchange(self, request, context):
+        """Process APDUs from the Ledger.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def Broadcast(self, request, context):
         """Broadcast a transaction to the network. This is provided as
         existing broadcast services may not support MWEB transactions.
@@ -144,6 +156,11 @@ def add_RpcServicer_to_server(servicer, server):
                     servicer.Create,
                     request_deserializer=mwebd__pb2.CreateRequest.FromString,
                     response_serializer=mwebd__pb2.CreateResponse.SerializeToString,
+            ),
+            'LedgerExchange': grpc.unary_unary_rpc_method_handler(
+                    servicer.LedgerExchange,
+                    request_deserializer=mwebd__pb2.LedgerApdu.FromString,
+                    response_serializer=mwebd__pb2.LedgerApdu.SerializeToString,
             ),
             'Broadcast': grpc.unary_unary_rpc_method_handler(
                     servicer.Broadcast,
@@ -259,6 +276,23 @@ class Rpc(object):
         return grpc.experimental.unary_unary(request, target, '/Rpc/Create',
             mwebd__pb2.CreateRequest.SerializeToString,
             mwebd__pb2.CreateResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def LedgerExchange(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/LedgerExchange',
+            mwebd__pb2.LedgerApdu.SerializeToString,
+            mwebd__pb2.LedgerApdu.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
