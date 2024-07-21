@@ -608,11 +608,25 @@ class Ledger_KeyStore(Hardware_KeyStore):
     @set_and_unset_signing
     def exchange_with_mwebd(self):
         client_ledger = self.get_client_dongle_object()
-        data = b''
-        while True:
-            data = mwebd.stub().LedgerExchange(LedgerApdu(data=data)).data
-            if not data: break
-            data = bytes(client_ledger.dongle.exchange(data))
+        try:
+            data = b''
+            while True:
+                data = mwebd.stub().LedgerExchange(LedgerApdu(data=data)).data
+                if not data: return
+                data = bytes(client_ledger.dongle.exchange(data))
+        except BTChipException as e:
+            if e.sw in (0x6985, 0x6d00):  # cancelled by user
+                raise UserFacingException(_('Cancelled by user'))
+            elif e.sw == 0x6982:
+                raise  # pin lock. decorator will catch it
+            else:
+                self.logger.exception('')
+                self.give_error(e)
+        except BaseException as e:
+            self.logger.exception('')
+            self.give_error(e)
+        finally:
+            self.handler.finished()
 
 class LedgerPlugin(HW_PluginBase):
     keystore_class = Ledger_KeyStore
