@@ -1659,7 +1659,6 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             raise Exception(f'Invalid argument fee: {fee}')
 
         scan_secret = spend_secret = bytes(32)
-        hd_path = convert_bip32_path_to_list_of_uint32(self.keystore.get_derivation_prefix())
         if self.txin_type == 'mweb':
             if self.keystore.get_type_text() == 'hw[ledger]':
                 scan_secret = bytes.fromhex(self.keystore.scan_secret)
@@ -1702,7 +1701,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 change_addrs=change_addrs,
                 scan_secret=scan_secret,
                 spend_secret=spend_secret,
-                hd_path=hd_path,
+                keystore=self.keystore,
                 fee_estimator_vb=fee_estimator,
                 dust_threshold=self.dust_threshold())
         else:
@@ -1734,11 +1733,11 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 return PartialTransaction.from_io(list(coins), list(outputs))
 
             tx = set_output_values()
-            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, hd_path,
+            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, self.keystore,
                                            fee_estimator, dry_run=True)
             amount -= fee_increase
             tx = set_output_values()
-            tx, _ = mwebd.create(tx, scan_secret, spend_secret, hd_path, fee_estimator)
+            tx, _ = mwebd.create(tx, scan_secret, spend_secret, self.keystore, fee_estimator)
 
         # Timelock tx to current height.
         tx.locktime = get_locktime_for_new_transaction(self.network)

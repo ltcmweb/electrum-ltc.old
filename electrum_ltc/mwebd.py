@@ -5,6 +5,7 @@ import socket
 import subprocess
 import threading
 
+from .bip32 import convert_bip32_path_to_list_of_uint32
 from .bitcoin import is_mweb_address
 from . import constants
 from .transaction import PartialTransaction, Transaction, TxInput, TxOutpoint
@@ -56,7 +57,8 @@ def stub_async():
     start_if_needed()
     return RpcStub(grpc.aio.insecure_channel(f'127.0.0.1:{port}'))
 
-def create(tx, scan_secret, spend_secret, hd_path, fee_estimator, *, dry_run = False):
+def create(tx, scan_secret, spend_secret, keystore, fee_estimator, *, dry_run = False):
+    hd_path = convert_bip32_path_to_list_of_uint32(keystore.get_derivation_prefix())
     txins = []
     for txin in tx.inputs():
         if txin.mweb_output_id:
@@ -66,10 +68,13 @@ def create(tx, scan_secret, spend_secret, hd_path, fee_estimator, *, dry_run = F
     tx._inputs, txins = txins, tx._inputs
     raw_tx = bytes.fromhex(tx.serialize_to_network(include_sigs=False))
     tx._inputs = txins
-    resp = stub().Create(CreateRequest(raw_tx=raw_tx,
-        scan_secret=scan_secret, spend_secret=spend_secret,
-        fee_rate_per_kb=fee_estimator(1000), dry_run=dry_run,
-        hd_path=hd_path))
+    while True:
+        resp = stub().Create(CreateRequest(raw_tx=raw_tx,
+            scan_secret=scan_secret, spend_secret=spend_secret,
+            fee_rate_per_kb=fee_estimator(1000), dry_run=dry_run,
+            hd_path=hd_path))
+        if resp.raw_tx: break
+        keystore.exchange_with_mwebd()
     if resp.raw_tx == raw_tx: return tx, 0
     tx2 = PartialTransaction.from_tx(Transaction(resp.raw_tx))
     for i, txin in enumerate(tx2.inputs()):

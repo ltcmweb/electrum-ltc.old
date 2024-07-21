@@ -1,4 +1,3 @@
-from grpc._channel import _InactiveRpcError
 from struct import pack, unpack
 import hashlib
 import sys
@@ -9,9 +8,10 @@ from electrum_ltc import ecc, constants, mwebd
 from electrum_ltc import bip32
 from electrum_ltc.crypto import hash_160
 from electrum_ltc.bitcoin import int_to_hex, var_int, is_segwit_script_type, is_b58_address
-from electrum_ltc.bip32 import BIP32Node, convert_bip32_intpath_to_strpath, convert_bip32_path_to_list_of_uint32
+from electrum_ltc.bip32 import BIP32Node, convert_bip32_intpath_to_strpath
 from electrum_ltc.i18n import _
 from electrum_ltc.keystore import Hardware_KeyStore
+from electrum_ltc.mwebd_pb2 import LedgerApdu
 from electrum_ltc.transaction import Transaction, PartialTransaction, PartialTxInput, PartialTxOutput
 from electrum_ltc.wallet import Standard_Wallet
 from electrum_ltc.util import bfh, bh2u, versiontuple, UserFacingException
@@ -596,12 +596,23 @@ class Ledger_KeyStore(Hardware_KeyStore):
             self.handler.finished()
 
     def show_address_mweb(self, sequence):
-        bip32_intpath = convert_bip32_path_to_list_of_uint32(self.get_derivation_prefix())
+        bip32_intpath = bip32.convert_bip32_path_to_list_of_uint32(self.get_derivation_prefix())
         apdu = [0xeb, 5, 1, 0, 0, len(bip32_intpath)]
         bip32_intpath.append(sequence[1] + 1)
         apdu.extend(pack('>%dI' % len(bip32_intpath), *bip32_intpath))
         apdu[4] = len(apdu) - 5
         self.get_client_dongle_object().dongle.exchange(bytearray(apdu))
+
+    @runs_in_hwd_thread
+    @test_pin_unlocked
+    @set_and_unset_signing
+    def exchange_with_mwebd(self):
+        client_ledger = self.get_client_dongle_object()
+        data = b''
+        while True:
+            data = mwebd.stub().LedgerExchange(LedgerApdu(data=data)).data
+            if not data: break
+            data = bytes(client_ledger.dongle.exchange(data))
 
 class LedgerPlugin(HW_PluginBase):
     keystore_class = Ledger_KeyStore

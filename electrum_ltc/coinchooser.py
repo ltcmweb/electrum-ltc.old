@@ -28,6 +28,7 @@ from typing import NamedTuple, List, Callable, Sequence, Union, Dict, Tuple, Map
 from decimal import Decimal
 
 from .bitcoin import sha256, COIN, is_address, is_mweb_address
+from .keystore import KeyStore
 from .transaction import Transaction, TxOutput, PartialTransaction, PartialTxInput, PartialTxOutput
 from .util import NotEnoughFunds
 from .logging import Logger
@@ -268,7 +269,7 @@ class CoinChooserBase(Logger):
 
     def make_tx(self, *, coins: Sequence[PartialTxInput], inputs: List[PartialTxInput],
                 outputs: List[PartialTxOutput], change_addrs: Sequence[str],
-                scan_secret: bytes, spend_secret: bytes, hd_path: Sequence[int],
+                scan_secret: bytes, spend_secret: bytes, keystore: KeyStore,
                 fee_estimator_vb: Callable, dust_threshold: int) -> PartialTransaction:
         """Select unspent coins to spend to pay outputs.  If the change is
         greater than dust_threshold (after adding the change output to
@@ -313,14 +314,14 @@ class CoinChooserBase(Logger):
                 else:
                     txouts.append(txout)
             tx._outputs = txouts
-            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, hd_path,
+            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, keystore,
                                            fee_estimator_vb, dry_run=True)
             sum_change = sum([x.value for x in change])
             if fee_increase <= sum_change:
                 for txout in change:
                     txout.value -= ceil(txout.value / sum_change * fee_increase)
                     if txout.value < 0: txout.value = 0
-            tx, _ = mwebd.create(tx, scan_secret, spend_secret, hd_path,
+            tx, _ = mwebd.create(tx, scan_secret, spend_secret, keystore,
                                  fee_estimator_vb, dry_run=dry_run)
             change_added_back = [x for x in canonical_change if x.value >= dust_threshold]
             tx.add_outputs(change_added_back)
