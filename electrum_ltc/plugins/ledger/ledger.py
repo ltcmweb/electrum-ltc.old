@@ -566,16 +566,16 @@ class Ledger_KeyStore(Hardware_KeyStore):
     @test_pin_unlocked
     @set_and_unset_signing
     def show_address(self, sequence, txin_type):
-        if txin_type == 'mweb':
-            self.show_address_mweb(sequence)
-            return
         client_ledger = self.get_client_dongle_object()
         address_path = self.get_derivation_prefix()[2:] + "/%d/%d"%sequence
         self.handler.show_message(_("Showing address ..."))
         segwit = is_segwit_script_type(txin_type)
         segwitNative = txin_type == 'p2wpkh'
         try:
-            client_ledger.getWalletPublicKey(address_path, showOnScreen=True, segwit=segwit, segwitNative=segwitNative)
+            if txin_type == 'mweb':
+                self.show_address_mweb(sequence)
+            else:
+                client_ledger.getWalletPublicKey(address_path, showOnScreen=True, segwit=segwit, segwitNative=segwitNative)
         except BTChipException as e:
             if e.sw == 0x6985:  # cancelled by user
                 pass
@@ -596,33 +596,12 @@ class Ledger_KeyStore(Hardware_KeyStore):
             self.handler.finished()
 
     def show_address_mweb(self, sequence):
-        client_ledger = self.get_client_dongle_object()
-        self.handler.show_message(_("Showing address ..."))
-        try:
-            bip32_intpath = convert_bip32_path_to_list_of_uint32(self.get_derivation_prefix())
-            bip32_intpath.append(sequence[1] + 1)
-            apdu = [0xeb, 5, 1, 0, 0, len(bip32_intpath) - 1]
-            apdu.extend(pack('>%dI' % len(bip32_intpath), *bip32_intpath))
-            apdu[4] = len(apdu) - 5
-            client_ledger.dongle.exchange(bytearray(apdu))
-        except BTChipException as e:
-            if e.sw == 0x6985:  # cancelled by user
-                pass
-            elif e.sw == 0x6982:
-                raise  # pin lock. decorator will catch it
-            elif e.sw == 0x6b00:  # hw.1 raises this
-                self.handler.show_error('{}\n{}\n{}'.format(
-                    _('Error showing address') + ':',
-                    e,
-                    _('Your device might not have support for this functionality.')))
-            else:
-                self.logger.exception('')
-                self.handler.show_error(e)
-        except BaseException as e:
-            self.logger.exception('')
-            self.handler.show_error(e)
-        finally:
-            self.handler.finished()
+        bip32_intpath = convert_bip32_path_to_list_of_uint32(self.get_derivation_prefix())
+        apdu = [0xeb, 5, 1, 0, 0, len(bip32_intpath)]
+        bip32_intpath.append(sequence[1] + 1)
+        apdu.extend(pack('>%dI' % len(bip32_intpath), *bip32_intpath))
+        apdu[4] = len(apdu) - 5
+        self.get_client_dongle_object().dongle.exchange(bytearray(apdu))
 
 class LedgerPlugin(HW_PluginBase):
     keystore_class = Ledger_KeyStore
