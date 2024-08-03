@@ -2222,7 +2222,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             txin.utxo = self.get_input_tx(txin.prevout.txid.hex(), ignore_network_issues=ignore_network_issues)
             has_mweb_output = any(o.mweb_output_id for o in txin.utxo.outputs())
             has_canonical_output = any(not o.mweb_output_id for o in txin.utxo.outputs())
-            if has_mweb_output and has_canonical_output:
+            if self.txin_type != 'mweb' and has_mweb_output and has_canonical_output:
                 try: # maybe pegin with change, need the broadcasted rawtx for Ledger
                     txin.broadcast_tx = self.network.run_from_another_thread(
                         self.network.get_transaction(txin.prevout.txid.hex(), timeout=10))
