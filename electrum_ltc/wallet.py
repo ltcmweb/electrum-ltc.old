@@ -1621,6 +1621,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             outputs: List[PartialTxOutput],
             fee=None,
             change_addr: str = None,
+            dry_run=False,
             is_sweep=False,
             rbf=False) -> PartialTransaction:
         """Can raise NotEnoughFunds or NoDynamicFeeEstimates."""
@@ -1737,7 +1738,8 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                                            fee_estimator, dry_run=True)
             amount -= fee_increase
             tx = set_output_values()
-            tx, _ = mwebd.create(tx, scan_secret, spend_secret, self.keystore, fee_estimator)
+            tx, _ = mwebd.create(tx, scan_secret, spend_secret, self.keystore,
+                                 fee_estimator, dry_run=dry_run)
 
         # Timelock tx to current height.
         tx.locktime = get_locktime_for_new_transaction(self.network)
@@ -2218,10 +2220,13 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 txin.witness_utxo = TxOutput.from_address_and_value(address, txin_value)
         if txin.utxo is None:
             txin.utxo = self.get_input_tx(txin.prevout.txid.hex(), ignore_network_issues=ignore_network_issues)
-            try:
-                txin.broadcast_tx = self.network.run_from_another_thread(
-                    self.network.get_transaction(txin.prevout.txid.hex(), timeout=10))
-            except: ()
+            has_mweb_output = any(o.mweb_output_id for o in txin.utxo.outputs())
+            has_canonical_output = any(not o.mweb_output_id for o in txin.utxo.outputs())
+            if has_mweb_output and has_canonical_output:
+                try: # maybe pegin with change, need the broadcasted rawtx for Ledger
+                    txin.broadcast_tx = self.network.run_from_another_thread(
+                        self.network.get_transaction(txin.prevout.txid.hex(), timeout=10))
+                except: ()
 
     def _learn_derivation_path_for_address_from_txinout(self, txinout: Union[PartialTxInput, PartialTxOutput],
                                                         address: str) -> bool:

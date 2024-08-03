@@ -185,6 +185,7 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
             coins=self.window.get_coins(),
             outputs=outputs,
             fee=fee_est,
+            dry_run=True,
             is_sweep=False)
 
         try:
