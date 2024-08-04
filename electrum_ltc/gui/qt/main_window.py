@@ -532,6 +532,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         name_and_version = self.get_app_name_and_version_str()
         title = f"{name_and_version}  -  {self.wallet.basename()}"
         extra = [self.wallet.db.get('wallet_type', '?')]
+        if self.wallet.txin_type == 'mweb':
+            extra.append('mweb')
         if self.wallet.is_watching_only():
             extra.append(_('watching only'))
         title += '  [%s]'% ', '.join(extra)
@@ -957,12 +959,14 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
                 network_text = _("MWEB is disconnected")
                 icon = read_QIcon("status_disconnected.png")
             elif mwebd_status.block_header_height < server_height:
-                network_text = ("{} ({}/{})".format(_("Synchronizing MWEB..."),
-                                mwebd_status.block_header_height, server_height))
+                network_text = ("{} ({}/{}, {}%)".format(_("Synchronizing MWEB..."),
+                                mwebd_status.block_header_height, server_height,
+                                round(mwebd_status.block_header_height * 100 / server_height)))
                 icon = read_QIcon("status_waiting.png")
             elif mwebd_status.mweb_header_height < server_height:
-                network_text = ("{} ({}/{})".format(_("Synchronizing MWEB..."),
-                                mwebd_status.mweb_header_height, server_height))
+                network_text = ("{} ({}/{}, {}%)".format(_("Synchronizing MWEB..."),
+                                mwebd_status.mweb_header_height, server_height,
+                                round(mwebd_status.mweb_header_height * 100 / server_height)))
                 icon = read_QIcon("status_waiting.png")
             elif mwebd_status.mweb_utxos_height < server_height:
                 network_text = _("Synchronizing MWEB...")
