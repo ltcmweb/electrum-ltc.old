@@ -16,9 +16,8 @@ from electrum_ltc import lnutil
 from electrum_ltc.plugin import run_hook
 from electrum_ltc.i18n import _
 from electrum_ltc.util import (get_asyncio_loop, bh2u, FailedToParsePaymentIdentifier,
-                               InvalidBitcoinURI, maybe_extract_lightning_payment_identifier,
-                               NotEnoughFunds, NoDynamicFeeEstimates, UserFacingException,
-                               InvoiceError, parse_max_spend)
+                               InvalidBitcoinURI, maybe_extract_lightning_payment_identifier, NotEnoughFunds,
+                               NoDynamicFeeEstimates, InvoiceError, parse_max_spend)
 from electrum_ltc.invoices import PR_PAID, Invoice
 from electrum_ltc.transaction import Transaction, PartialTxInput, PartialTransaction, PartialTxOutput
 from electrum_ltc.network import TxBroadcastError, BestEffortRequestFailed
@@ -185,7 +184,6 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
             coins=self.window.get_coins(),
             outputs=outputs,
             fee=fee_est,
-            dry_run=True,
             is_sweep=False)
 
         try:
@@ -199,10 +197,6 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
             self.max_button.setChecked(False)
             text = self.get_text_not_enough_funds_mentioning_frozen()
             self.show_error(text)
-            return
-        except UserFacingException as e:
-            self.max_button.setChecked(False)
-            self.show_error(str(e))
             return
 
         self.max_button.setChecked(True)
@@ -248,8 +242,6 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
                 text = self.get_text_not_enough_funds_mentioning_frozen()
                 self.show_message(text)
                 return
-        if conf_dlg.errored:
-            return
 
         # shortcut to advanced preview (after "enough funds" check!)
         if self.config.get('advanced_preview'):
@@ -267,10 +259,6 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
         if is_send:
             self.save_pending_invoice()
             mweb_output_ids = []
-            if tx._original_tx:
-                for txout in tx._original_tx.outputs():
-                    if txout.mweb_output_id:
-                        mweb_output_ids.append(txout.mweb_output_id)
             def broadcast_done(success):
                 if success and tx._original_tx:
                     tx._original_tx._cached_txid = tx.txid()
@@ -281,6 +269,10 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
                     self.wallet._pending_mweb_output_ids.difference_update(mweb_output_ids)
             def sign_done(success):
                 if success:
+                    if tx._original_tx:
+                        for txout in tx._original_tx.outputs():
+                            if txout.mweb_output_id:
+                                mweb_output_ids.append(txout.mweb_output_id)
                     with self.wallet.lock:
                         self.wallet._pending_mweb_output_ids.update(mweb_output_ids)
                     self.window.broadcast_or_show(tx, callback=broadcast_done)

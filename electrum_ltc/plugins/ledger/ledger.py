@@ -597,8 +597,10 @@ class Ledger_KeyStore(Hardware_KeyStore):
 
     def show_address_mweb(self, sequence):
         bip32_intpath = bip32.convert_bip32_path_to_list_of_uint32(self.get_derivation_prefix())
-        apdu = [0xeb, 5, 1, 0, 0, len(bip32_intpath)]
-        bip32_intpath.append(sequence[1] + 1)
+        apdu = [0xeb, 5, 0, 0, 0, len(bip32_intpath)]
+        if sequence:
+            bip32_intpath.append(sequence[1] + 1)
+            apdu[2] = 1
         apdu.extend(pack('>%dI' % len(bip32_intpath), *bip32_intpath))
         apdu[4] = len(apdu) - 5
         self.get_client_dongle_object().dongle.exchange(bytearray(apdu))
@@ -609,6 +611,7 @@ class Ledger_KeyStore(Hardware_KeyStore):
     def exchange_with_mwebd(self):
         client_ledger = self.get_client_dongle_object()
         try:
+            self.show_address_mweb(None)  # reset ledger mweb context
             data = b''
             while True:
                 data = mwebd.stub().LedgerExchange(LedgerApdu(data=data)).data

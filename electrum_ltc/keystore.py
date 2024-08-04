@@ -201,10 +201,9 @@ class Software_KeyStore(KeyStore):
         self.pw_hash_version = d.get('pw_hash_version', 1)
         if self.pw_hash_version not in SUPPORTED_PW_HASH_VERSIONS:
             raise UnsupportedPasswordHashVersion(self.pw_hash_version)
-        self._may_have_password = True
 
     def may_have_password(self):
-        return not self.is_watching_only() and self._may_have_password
+        return not self.is_watching_only()
 
     def sign_message(self, sequence, message, password, *, script_type=None) -> bytes:
         privkey, compressed = self.get_private_key(sequence, password)
@@ -590,6 +589,8 @@ class BIP32_KeyStore(Xpub, Deterministic_KeyStore):
         Deterministic_KeyStore.__init__(self, d)
         self.xpub = d.get('xpub')
         self.xprv = d.get('xprv')
+        self.scan_secret = d.get('mweb_scan_secret')
+        self.spend_pubkey = d.get('mweb_spend_pubkey')
 
     def format_seed(self, seed):
         return ' '.join(seed.split())
@@ -600,6 +601,8 @@ class BIP32_KeyStore(Xpub, Deterministic_KeyStore):
         d['xprv'] = self.xprv
         d['derivation'] = self.get_derivation_prefix()
         d['root_fingerprint'] = self.get_root_fingerprint()
+        d['mweb_scan_secret'] = self.scan_secret
+        d['mweb_spend_pubkey'] = self.spend_pubkey
         return d
 
     def get_master_private_key(self, password):
@@ -649,6 +652,11 @@ class BIP32_KeyStore(Xpub, Deterministic_KeyStore):
         node = rootnode.subkey_at_private_derivation(derivation)
         self.add_xprv(node.to_xprv())
         self.add_key_origin_from_root_node(derivation_prefix=derivation, root_node=rootnode)
+        if xtype == 'mweb':
+            n = node.subkey_at_private_derivation([BIP32_PRIME])
+            self.scan_secret = n.eckey.get_secret_bytes().hex()
+            n = node.subkey_at_private_derivation([BIP32_PRIME + 1])
+            self.spend_pubkey = n.eckey.get_public_key_bytes().hex()
 
     def get_private_key(self, sequence: Sequence[int], password):
         xprv = self.get_master_private_key(password)
@@ -976,7 +984,6 @@ def from_bip43_rootseed(root_seed, derivation, xtype=None):
     if xtype is None:
         xtype = xtype_from_derivation(derivation)
     k.add_xprv_from_seed(root_seed, xtype, derivation)
-    if xtype == 'mweb': k._may_have_password = False
     return k
 
 
@@ -1118,7 +1125,6 @@ def from_seed(seed, passphrase, is_p2sh=False):
         elif t == 'mweb':
             der = "m/1000'/"
             xtype = 'mweb'
-            keystore._may_have_password = False
         else:
             der = "m/1'/" if is_p2sh else "m/0'/"
             xtype = 'p2wsh' if is_p2sh else 'p2wpkh'

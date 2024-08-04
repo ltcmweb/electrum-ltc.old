@@ -268,8 +268,7 @@ class CoinChooserBase(Logger):
         return total_weight
 
     def make_tx(self, *, coins: Sequence[PartialTxInput], inputs: List[PartialTxInput],
-                outputs: List[PartialTxOutput], change_addrs: Sequence[str],
-                scan_secret: bytes, spend_secret: bytes, keystore: KeyStore,
+                outputs: List[PartialTxOutput], change_addrs: Sequence[str], keystore: KeyStore,
                 fee_estimator_vb: Callable, dust_threshold: int) -> PartialTransaction:
         """Select unspent coins to spend to pay outputs.  If the change is
         greater than dust_threshold (after adding the change output to
@@ -303,7 +302,7 @@ class CoinChooserBase(Logger):
         def fee_estimator_w(weight):
             return fee_estimator_vb(Transaction.virtual_size_from_weight(weight))
 
-        def tx_from_buckets(buckets, dry_run = True):
+        def tx_from_buckets(buckets):
             tx, change = self._construct_tx_from_selected_buckets(buckets=buckets,
                 base_tx=base_tx, change_addrs=change_addrs, fee_estimator_w=fee_estimator_w,
                 dust_threshold=dust_threshold, base_weight=base_weight)
@@ -314,15 +313,13 @@ class CoinChooserBase(Logger):
                 else:
                     txouts.append(txout)
             tx._outputs = txouts
-            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, keystore,
-                                           fee_estimator_vb, dry_run=True)
+            _, fee_increase = mwebd.create(tx, keystore, fee_estimator_vb)
             sum_change = sum([x.value for x in change])
             if fee_increase <= sum_change:
                 for txout in change:
                     txout.value -= ceil(txout.value / sum_change * fee_increase)
                     if txout.value < 0: txout.value = 0
-            tx, _ = mwebd.create(tx, scan_secret, spend_secret, keystore,
-                                 fee_estimator_vb, dry_run=dry_run)
+            tx, _ = mwebd.create(tx, keystore, fee_estimator_vb)
             change_added_back = [x for x in canonical_change if x.value >= dust_threshold]
             tx.add_outputs(change_added_back)
             if tx._original_tx: tx._original_tx.add_outputs(change_added_back)
@@ -356,7 +353,7 @@ class CoinChooserBase(Logger):
         # Choose a subset of the buckets
         scored_candidate = self.choose_buckets(all_buckets, sufficient_funds,
                                                self.penalty_func(base_tx, tx_from_buckets=tx_from_buckets))
-        tx, _ = tx_from_buckets(scored_candidate.buckets, False)
+        tx, _ = tx_from_buckets(scored_candidate.buckets)
 
         self.logger.info(f"using {len(tx.inputs())} inputs")
         self.logger.info(f"using buckets: {[bucket.desc for bucket in scored_candidate.buckets]}")

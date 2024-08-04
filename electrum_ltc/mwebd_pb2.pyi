@@ -61,22 +61,6 @@ class AddressResponse(_message.Message):
     address: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, address: _Optional[_Iterable[str]] = ...) -> None: ...
 
-class LedgerKeysRequest(_message.Message):
-    __slots__ = ("hd_path", "confirm_address")
-    HD_PATH_FIELD_NUMBER: _ClassVar[int]
-    CONFIRM_ADDRESS_FIELD_NUMBER: _ClassVar[int]
-    hd_path: _containers.RepeatedScalarFieldContainer[int]
-    confirm_address: bool
-    def __init__(self, hd_path: _Optional[_Iterable[int]] = ..., confirm_address: bool = ...) -> None: ...
-
-class LedgerKeysResponse(_message.Message):
-    __slots__ = ("scan_secret", "spend_pubkey")
-    SCAN_SECRET_FIELD_NUMBER: _ClassVar[int]
-    SPEND_PUBKEY_FIELD_NUMBER: _ClassVar[int]
-    scan_secret: bytes
-    spend_pubkey: bytes
-    def __init__(self, scan_secret: _Optional[bytes] = ..., spend_pubkey: _Optional[bytes] = ...) -> None: ...
-
 class LedgerApdu(_message.Message):
     __slots__ = ("data",)
     DATA_FIELD_NUMBER: _ClassVar[int]
@@ -96,20 +80,18 @@ class SpentResponse(_message.Message):
     def __init__(self, output_id: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CreateRequest(_message.Message):
-    __slots__ = ("raw_tx", "scan_secret", "spend_secret", "fee_rate_per_kb", "dry_run", "hd_path")
+    __slots__ = ("raw_tx", "scan_secret", "spend_secret", "fee_rate_per_kb", "dry_run")
     RAW_TX_FIELD_NUMBER: _ClassVar[int]
     SCAN_SECRET_FIELD_NUMBER: _ClassVar[int]
     SPEND_SECRET_FIELD_NUMBER: _ClassVar[int]
     FEE_RATE_PER_KB_FIELD_NUMBER: _ClassVar[int]
     DRY_RUN_FIELD_NUMBER: _ClassVar[int]
-    HD_PATH_FIELD_NUMBER: _ClassVar[int]
     raw_tx: bytes
     scan_secret: bytes
     spend_secret: bytes
     fee_rate_per_kb: int
     dry_run: bool
-    hd_path: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, raw_tx: _Optional[bytes] = ..., scan_secret: _Optional[bytes] = ..., spend_secret: _Optional[bytes] = ..., fee_rate_per_kb: _Optional[int] = ..., dry_run: bool = ..., hd_path: _Optional[_Iterable[int]] = ...) -> None: ...
+    def __init__(self, raw_tx: _Optional[bytes] = ..., scan_secret: _Optional[bytes] = ..., spend_secret: _Optional[bytes] = ..., fee_rate_per_kb: _Optional[int] = ..., dry_run: bool = ...) -> None: ...
 
 class CreateResponse(_message.Message):
     __slots__ = ("raw_tx", "output_id")

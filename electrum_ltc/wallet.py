@@ -1621,7 +1621,6 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             outputs: List[PartialTxOutput],
             fee=None,
             change_addr: str = None,
-            dry_run=False,
             is_sweep=False,
             rbf=False) -> PartialTransaction:
         """Can raise NotEnoughFunds or NoDynamicFeeEstimates."""
@@ -1659,14 +1658,6 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         else:
             raise Exception(f'Invalid argument fee: {fee}')
 
-        scan_secret = spend_secret = bytes(32)
-        if self.txin_type == 'mweb':
-            if self.keystore.get_type_text() == 'hw[ledger]':
-                scan_secret = bytes.fromhex(self.keystore.scan_secret)
-            else:
-                scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
-                spend_secret, _ = self.keystore.get_private_key([0x80000001], None)
-
         if len(i_max) == 0:
             # Let the coin chooser select the coins to spend
             coin_chooser = coinchooser.get_coin_chooser(self.config)
@@ -1700,8 +1691,6 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 inputs=txi,
                 outputs=list(outputs) + txo,
                 change_addrs=change_addrs,
-                scan_secret=scan_secret,
-                spend_secret=spend_secret,
                 keystore=self.keystore,
                 fee_estimator_vb=fee_estimator,
                 dust_threshold=self.dust_threshold())
@@ -1734,12 +1723,10 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 return PartialTransaction.from_io(list(coins), list(outputs))
 
             tx = set_output_values()
-            _, fee_increase = mwebd.create(tx, scan_secret, spend_secret, self.keystore,
-                                           fee_estimator, dry_run=True)
+            _, fee_increase = mwebd.create(tx, self.keystore, fee_estimator)
             amount -= fee_increase
             tx = set_output_values()
-            tx, _ = mwebd.create(tx, scan_secret, spend_secret, self.keystore,
-                                 fee_estimator, dry_run=dry_run)
+            tx, _ = mwebd.create(tx, self.keystore, fee_estimator)
 
         # Timelock tx to current height.
         tx.locktime = get_locktime_for_new_transaction(self.network)
@@ -2351,6 +2338,11 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         if swap:
             self.lnworker.swap_manager.sign_tx(tx, swap)
             return
+        if tx._original_tx:
+            tmp_tx, _ = mwebd.create(tx._original_tx, self.keystore, self.config.estimate_fee,
+                                     dry_run=False, password=password)
+            tx._outputs = tmp_tx._outputs
+            tx._extra_bytes = tmp_tx._extra_bytes
         # add info to a temporary tx copy; including xpubs
         # and full derivation paths as hw keystores might want them
         tmp_tx = copy.deepcopy(tx)
@@ -3481,15 +3473,10 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
             n += 1
         if n in self._address_cache:
             return self._address_cache[n]
-        if self.keystore.get_type_text() == 'hw[ledger]':
-            scan_secret = bytes.fromhex(self.keystore.scan_secret)
-            spend_pubkey = bytes.fromhex(self.keystore.spend_pubkey)
-        else:
-            scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
-            spend_pubkey, _ = self.keystore.get_keypair([0x80000001], None)
         resp = mwebd.stub().Addresses(AddressRequest(
             from_index=n, to_index=n + (1 if for_change == 1 else 1000),
-            scan_secret=scan_secret, spend_pubkey=spend_pubkey))
+            scan_secret=bytes.fromhex(self.keystore.scan_secret),
+            spend_pubkey=bytes.fromhex(self.keystore.spend_pubkey)))
         for address in resp.address:
             self._address_cache[n] = address
             n += 1
@@ -3520,10 +3507,7 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
     def start_network(self, network):
         Deterministic_Wallet.start_network(self, network)
         if self.txin_type == 'mweb':
-            if self.keystore.get_type_text() == 'hw[ledger]':
-                scan_secret = bytes.fromhex(self.keystore.scan_secret)
-            else:
-                scan_secret, _ = self.keystore.get_private_key([0x80000000], None)
+            scan_secret = bytes.fromhex(self.keystore.scan_secret)
             asyncio.run_coroutine_threadsafe(self.subscribe_mweb_utxos(scan_secret),
                                              self.network.asyncio_loop)
 

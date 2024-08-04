@@ -29,11 +29,6 @@ class RpcStub(object):
                 request_serializer=mwebd__pb2.AddressRequest.SerializeToString,
                 response_deserializer=mwebd__pb2.AddressResponse.FromString,
                 )
-        self.LedgerKeys = channel.unary_unary(
-                '/Rpc/LedgerKeys',
-                request_serializer=mwebd__pb2.LedgerKeysRequest.SerializeToString,
-                response_deserializer=mwebd__pb2.LedgerKeysResponse.FromString,
-                )
         self.Spent = channel.unary_unary(
                 '/Rpc/Spent',
                 request_serializer=mwebd__pb2.SpentRequest.SerializeToString,
@@ -78,14 +73,6 @@ class RpcServicer(object):
 
     def Addresses(self, request, context):
         """Get a batch of MWEB addresses for an account.
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def LedgerKeys(self, request, context):
-        """Get the scan secret and spend pubkey from a Ledger
-        for a given HD path.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -141,11 +128,6 @@ def add_RpcServicer_to_server(servicer, server):
                     servicer.Addresses,
                     request_deserializer=mwebd__pb2.AddressRequest.FromString,
                     response_serializer=mwebd__pb2.AddressResponse.SerializeToString,
-            ),
-            'LedgerKeys': grpc.unary_unary_rpc_method_handler(
-                    servicer.LedgerKeys,
-                    request_deserializer=mwebd__pb2.LedgerKeysRequest.FromString,
-                    response_serializer=mwebd__pb2.LedgerKeysResponse.SerializeToString,
             ),
             'Spent': grpc.unary_unary_rpc_method_handler(
                     servicer.Spent,
@@ -225,23 +207,6 @@ class Rpc(object):
         return grpc.experimental.unary_unary(request, target, '/Rpc/Addresses',
             mwebd__pb2.AddressRequest.SerializeToString,
             mwebd__pb2.AddressResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def LedgerKeys(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/Rpc/LedgerKeys',
-            mwebd__pb2.LedgerKeysRequest.SerializeToString,
-            mwebd__pb2.LedgerKeysResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

@@ -959,13 +959,11 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
                 network_text = _("MWEB is disconnected")
                 icon = read_QIcon("status_disconnected.png")
             elif mwebd_status.block_header_height < server_height:
-                network_text = ("{} ({}/{}, {}%)".format(_("Synchronizing MWEB..."),
-                                mwebd_status.block_header_height, server_height,
+                network_text = ("{} ({}%)".format(_("Synchronizing MWEB..."),
                                 round(mwebd_status.block_header_height * 100 / server_height)))
                 icon = read_QIcon("status_waiting.png")
             elif mwebd_status.mweb_header_height < server_height:
-                network_text = ("{} ({}/{}, {}%)".format(_("Synchronizing MWEB..."),
-                                mwebd_status.mweb_header_height, server_height,
+                network_text = ("{} ({}%)".format(_("Synchronizing MWEB..."),
                                 round(mwebd_status.mweb_header_height * 100 / server_height)))
                 icon = read_QIcon("status_waiting.png")
             elif mwebd_status.mweb_utxos_height < server_height:
