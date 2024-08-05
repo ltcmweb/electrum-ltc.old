@@ -58,8 +58,9 @@ def stub_async():
     return RpcStub(grpc.aio.insecure_channel(f'127.0.0.1:{port}'))
 
 def create(tx, keystore, fee_estimator, *, dry_run = True, password = None):
-    scan_secret = bytes.fromhex(keystore.scan_secret)
-    spend_secret = bytes(32)
+    scan_secret = spend_secret = bytes(32)
+    if keystore.scan_secret:
+        scan_secret = bytes.fromhex(keystore.scan_secret)
     if not dry_run and keystore.may_have_password():
         spend_secret, _ = keystore.get_private_key([BIP32_PRIME + 1], password)
     txins = []

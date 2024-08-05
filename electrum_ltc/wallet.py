@@ -2339,9 +2339,13 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             self.lnworker.swap_manager.sign_tx(tx, swap)
             return
         if tx._original_tx:
-            tmp_tx, _ = mwebd.create(tx._original_tx, self.keystore, self.config.estimate_fee,
+            tmp_tx = copy.copy(tx._original_tx)
+            tmp_tx._outputs, change = [], []
+            for txout in tx._original_tx.outputs():
+                (change if txout in tx.outputs() else tmp_tx._outputs).append(txout)
+            tmp_tx, _ = mwebd.create(tmp_tx, self.keystore, self.config.estimate_fee,
                                      dry_run=False, password=password)
-            tx._outputs = tmp_tx._outputs
+            tx._outputs = tmp_tx._outputs + change
             tx._extra_bytes = tmp_tx._extra_bytes
         # add info to a temporary tx copy; including xpubs
         # and full derivation paths as hw keystores might want them
