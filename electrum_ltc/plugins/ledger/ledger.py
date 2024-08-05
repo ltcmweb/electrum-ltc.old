@@ -144,16 +144,21 @@ class Ledger_Client(HardwareClientBase):
                          fingerprint=fingerprint_bytes,
                          child_number=childnum_bytes).to_xpub()
 
+    def mweb_get_public_key(self, bip32_path, addr_index = None):
+        bip32_path = bip32.convert_bip32_path_to_list_of_uint32(bip32_path)
+        apdu = [0xeb, 5, 0, 0, 0, len(bip32_path)]
+        if addr_index is not None:
+            bip32_path.append(addr_index)
+            apdu[2] = 1
+        apdu.extend(pack('>%dI' % len(bip32_path), *bip32_path))
+        apdu[4] = len(apdu) - 5
+        return self.dongleObject.dongle.exchange(apdu)
+
     @runs_in_hwd_thread
     @test_pin_unlocked
     def get_mweb_keys(self, bip32_path):
         self.checkDevice()
-        bip32_path = bip32.normalize_bip32_derivation(bip32_path)
-        bip32_intpath = bip32.convert_bip32_path_to_list_of_uint32(bip32_path)
-        apdu = [0xeb, 5, 0, 0, 0, len(bip32_intpath)]
-        apdu.extend(pack('>%dI' % len(bip32_intpath), *bip32_intpath))
-        apdu[4] = len(apdu) - 5
-        resp = self.dongleObject.dongle.exchange(bytearray(apdu))
+        resp = self.mweb_get_public_key(bip32.normalize_bip32_derivation(bip32_path))
         return resp[:32].hex(), resp[32:].hex()
 
     def has_detached_pin_support(self, client: 'btchip'):
@@ -398,8 +403,18 @@ class Ledger_KeyStore(Hardware_KeyStore):
             if txin_prev_tx is None and not txin.is_segwit():
                 raise UserFacingException(_('Missing previous tx for legacy input.'))
             txin_prev_tx_raw = txin_prev_tx.serialize() if txin_prev_tx else None
+
+            out_idx = txin.prevout.out_idx
+            try:
+                txout = txin_prev_tx.outputs()[out_idx]
+                indices = lambda tx: [i for i, o in enumerate(tx.outputs()) if o == txout]
+                i1 = indices(txin_prev_tx)
+                i2 = indices(Transaction(txin.broadcast_tx))
+                out_idx = i2[i1.index(out_idx)]
+            except: ()
+
             inputs.append([txin.broadcast_tx or txin_prev_tx_raw,
-                           txin.prevout.out_idx,
+                           out_idx,
                            redeemScript,
                            txin.prevout.txid.hex(),
                            my_pubkey,
@@ -566,16 +581,16 @@ class Ledger_KeyStore(Hardware_KeyStore):
     @test_pin_unlocked
     @set_and_unset_signing
     def show_address(self, sequence, txin_type):
-        client_ledger = self.get_client_dongle_object()
+        client = self.get_client()
         address_path = self.get_derivation_prefix()[2:] + "/%d/%d"%sequence
         self.handler.show_message(_("Showing address ..."))
         segwit = is_segwit_script_type(txin_type)
         segwitNative = txin_type == 'p2wpkh'
         try:
             if txin_type == 'mweb':
-                self.show_address_mweb(sequence)
+                client.mweb_get_public_key(self.get_derivation_prefix(), sequence[1] + 1)
             else:
-                client_ledger.getWalletPublicKey(address_path, showOnScreen=True, segwit=segwit, segwitNative=segwitNative)
+                client.dongleObject.getWalletPublicKey(address_path, showOnScreen=True, segwit=segwit, segwitNative=segwitNative)
         except BTChipException as e:
             if e.sw == 0x6985:  # cancelled by user
                 pass
@@ -595,28 +610,18 @@ class Ledger_KeyStore(Hardware_KeyStore):
         finally:
             self.handler.finished()
 
-    def show_address_mweb(self, sequence):
-        bip32_intpath = bip32.convert_bip32_path_to_list_of_uint32(self.get_derivation_prefix())
-        apdu = [0xeb, 5, 0, 0, 0, len(bip32_intpath)]
-        if sequence:
-            bip32_intpath.append(sequence[1] + 1)
-            apdu[2] = 1
-        apdu.extend(pack('>%dI' % len(bip32_intpath), *bip32_intpath))
-        apdu[4] = len(apdu) - 5
-        self.get_client_dongle_object().dongle.exchange(bytearray(apdu))
-
     @runs_in_hwd_thread
     @test_pin_unlocked
     @set_and_unset_signing
     def exchange_with_mwebd(self):
-        client_ledger = self.get_client_dongle_object()
+        client = self.get_client()
         try:
-            self.show_address_mweb(None)  # reset ledger mweb context
+            client.mweb_get_public_key(self.get_derivation_prefix())  # reset ledger mweb context
             data = b''
             while True:
                 data = mwebd.stub().LedgerExchange(LedgerApdu(data=data)).data
                 if not data: return
-                data = bytes(client_ledger.dongle.exchange(data))
+                data = bytes(client.dongleObject.dongle.exchange(data))
         except BTChipException as e:
             if e.sw in (0x6985, 0x6d00):  # cancelled by user
                 raise UserFacingException(_('Cancelled by user'))

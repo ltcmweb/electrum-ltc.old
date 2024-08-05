@@ -2207,13 +2207,14 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 txin.witness_utxo = TxOutput.from_address_and_value(address, txin_value)
         if txin.utxo is None:
             txin.utxo = self.get_input_tx(txin.prevout.txid.hex(), ignore_network_issues=ignore_network_issues)
-            has_mweb_output = any(o.mweb_output_id for o in txin.utxo.outputs())
-            has_canonical_output = any(not o.mweb_output_id for o in txin.utxo.outputs())
-            if self.txin_type != 'mweb' and has_mweb_output and has_canonical_output:
-                try: # pegin with change, need broadcasted rawtx for Ledger
-                    txin.broadcast_tx = self.network.run_from_another_thread(
-                        self.network.get_transaction(txin.prevout.txid.hex(), timeout=10))
-                except: ()
+            if txin.utxo and self.txin_type != 'mweb':
+                has_mweb_output = any(o.mweb_output_id for o in txin.utxo.outputs())
+                has_canonical_output = any(not o.mweb_output_id for o in txin.utxo.outputs())
+                if has_mweb_output and has_canonical_output:
+                    try:  # pegin with change, need broadcasted rawtx for Ledger
+                        txin.broadcast_tx = self.network.run_from_another_thread(
+                            self.network.get_transaction(txin.prevout.txid.hex(), timeout=10))
+                    except: ()
 
     def _learn_derivation_path_for_address_from_txinout(self, txinout: Union[PartialTxInput, PartialTxOutput],
                                                         address: str) -> bool:
@@ -2342,11 +2343,13 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             tmp_tx = copy.copy(tx._original_tx)
             tmp_tx._outputs, change = [], []
             for txout in tx._original_tx.outputs():
-                (change if txout in tx.outputs() else tmp_tx._outputs).append(txout)
+                is_change = any(txout is o for o in tx.outputs())
+                (change if is_change else tmp_tx._outputs).append(txout)
             tmp_tx, _ = mwebd.create(tmp_tx, self.keystore, self.config.estimate_fee,
                                      dry_run=False, password=password)
-            tx._outputs = tmp_tx._outputs + change
+            tx._outputs = tmp_tx._outputs
             tx._extra_bytes = tmp_tx._extra_bytes
+            tx.add_outputs(change)
         # add info to a temporary tx copy; including xpubs
         # and full derivation paths as hw keystores might want them
         tmp_tx = copy.deepcopy(tx)
