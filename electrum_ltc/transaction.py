@@ -1278,7 +1278,6 @@ class PartialTxInput(TxInput, PSBTSection):
         self.witness_sizehint = None  # type: Optional[int]  # byte size of serialized complete witness, for tx size est
         self.mweb_output_id = None
         self.mweb_address_index = None
-        self.broadcast_tx = None
 
     @property
     def utxo(self):
@@ -2123,6 +2122,7 @@ class PartialTransaction(Transaction):
             *,
             include_xpubs: bool = False,
             ignore_network_issues: bool = True,
+            signing: bool = False,
     ) -> None:
         if self.is_complete():
             return
@@ -2145,6 +2145,7 @@ class PartialTransaction(Transaction):
                 txin,
                 only_der_suffix=False,
                 ignore_network_issues=ignore_network_issues,
+                signing=signing,
             )
         for txout in self.outputs():
             wallet.add_output_info(

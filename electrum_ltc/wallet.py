@@ -2191,6 +2191,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             *,
             address: str = None,
             ignore_network_issues: bool = True,
+            signing: bool = False,
     ) -> None:
         # - We prefer to include UTXO (full tx), even for segwit inputs (see #6198).
         # - For witness v0 inputs, we include *both* UTXO and WITNESS_UTXO. UTXO is a strict superset,
@@ -2205,15 +2206,20 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             if item:
                 txin_value = item[1]
                 txin.witness_utxo = TxOutput.from_address_and_value(address, txin_value)
-        if txin.utxo is None:
+        if txin.utxo is None or signing:
             txin.utxo = self.get_input_tx(txin.prevout.txid.hex(), ignore_network_issues=ignore_network_issues)
-            if txin.utxo and self.txin_type != 'mweb':
+            if txin.utxo and signing and self.txin_type != 'mweb':
                 has_mweb_output = any(o.mweb_output_id for o in txin.utxo.outputs())
                 has_canonical_output = any(not o.mweb_output_id for o in txin.utxo.outputs())
                 if has_mweb_output and has_canonical_output:
                     try:  # pegin with change, need broadcasted rawtx for Ledger
-                        txin.broadcast_tx = self.network.run_from_another_thread(
-                            self.network.get_transaction(txin.prevout.txid.hex(), timeout=10))
+                        tx = Transaction(self.network.run_from_another_thread(
+                            self.network.get_transaction(txin.prevout.txid.hex(), timeout=10)))
+                        txout = txin.utxo.outputs()[txin.prevout.out_idx]
+                        indices = lambda tx: [i for i, o in enumerate(tx.outputs()) if o == txout]
+                        out_idx = indices(tx)[indices(txin.utxo).index(txin.prevout.out_idx)]
+                        txin.prevout = TxOutpoint(txin.prevout.txid, out_idx)
+                        txin.utxo = tx
                     except: ()
 
     def _learn_derivation_path_for_address_from_txinout(self, txinout: Union[PartialTxInput, PartialTxOutput],
@@ -2230,10 +2236,12 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             *,
             only_der_suffix: bool = False,
             ignore_network_issues: bool = True,
+            signing: bool = False,
     ) -> None:
         address = self.adb.get_txin_address(txin)
         # note: we add input utxos regardless of is_mine
-        self._add_input_utxo_info(txin, ignore_network_issues=ignore_network_issues, address=address)
+        self._add_input_utxo_info(txin, ignore_network_issues=ignore_network_issues,
+                                  address=address, signing=signing)
         is_mine = self.is_mine(address)
         if not is_mine:
             is_mine = self._learn_derivation_path_for_address_from_txinout(txin, address)
@@ -2353,7 +2361,7 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         # add info to a temporary tx copy; including xpubs
         # and full derivation paths as hw keystores might want them
         tmp_tx = copy.deepcopy(tx)
-        tmp_tx.add_info_from_wallet(self, include_xpubs=True)
+        tmp_tx.add_info_from_wallet(self, include_xpubs=True, signing=True)
         # sign. start with ready keystores.
         # note: ks.ready_to_sign() side-effect: we trigger pairings with potential hw devices.
         #       We only do this once, before the loop, however we could rescan after each iteration,
@@ -2366,8 +2374,8 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 continue
         # remove sensitive info; then copy back details from temporary tx
         tmp_tx.remove_xpubs_and_bip32_paths()
+        tx.add_info_from_wallet(self, include_xpubs=False, signing=True)
         tx.combine_with_other_psbt(tmp_tx)
-        tx.add_info_from_wallet(self, include_xpubs=False)
         return tx
 
     def try_detecting_internal_addresses_corruption(self) -> None:

@@ -152,7 +152,7 @@ class Ledger_Client(HardwareClientBase):
             apdu[2] = 1
         apdu.extend(pack('>%dI' % len(bip32_path), *bip32_path))
         apdu[4] = len(apdu) - 5
-        return self.dongleObject.dongle.exchange(apdu)
+        return self.dongleObject.dongle.exchange(bytearray(apdu))
 
     @runs_in_hwd_thread
     @test_pin_unlocked
@@ -403,18 +403,8 @@ class Ledger_KeyStore(Hardware_KeyStore):
             if txin_prev_tx is None and not txin.is_segwit():
                 raise UserFacingException(_('Missing previous tx for legacy input.'))
             txin_prev_tx_raw = txin_prev_tx.serialize() if txin_prev_tx else None
-
-            out_idx = txin.prevout.out_idx
-            try:
-                txout = txin_prev_tx.outputs()[out_idx]
-                indices = lambda tx: [i for i, o in enumerate(tx.outputs()) if o == txout]
-                i1 = indices(txin_prev_tx)
-                i2 = indices(Transaction(txin.broadcast_tx))
-                out_idx = i2[i1.index(out_idx)]
-            except: ()
-
-            inputs.append([txin.broadcast_tx or txin_prev_tx_raw,
-                           out_idx,
+            inputs.append([txin_prev_tx_raw,
+                           txin.prevout.out_idx,
                            redeemScript,
                            txin.prevout.txid.hex(),
                            my_pubkey,

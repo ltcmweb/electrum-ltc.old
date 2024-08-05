@@ -1,4 +1,5 @@
 from contextlib import closing
+from copy import copy
 import grpc
 from pathlib import Path
 import socket
@@ -81,7 +82,7 @@ def create(tx, keystore, fee_estimator, *, dry_run = True, password = None):
     if resp.raw_tx == raw_tx: return tx, 0
     tx2 = PartialTransaction.from_tx(Transaction(resp.raw_tx))
     for i, txin in enumerate(tx2.inputs()):
-        tx2.inputs()[i] = next(x for x in tx.inputs() if str(x.prevout) == str(txin.prevout))
+        tx2.inputs()[i] = copy(next(x for x in tx.inputs() if str(x.prevout) == str(txin.prevout)))
     mweb_input = tx.input_value() - tx2.input_value()
     expected_pegin = max(0, tx.output_value() - mweb_input)
     fee_increase = tx2.output_value() - expected_pegin
