@@ -1093,17 +1093,14 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             for txout in invoice.get_outputs():
                 self._invoices_from_scriptpubkey_map[txout.scriptpubkey].add(invoice_key)
 
-    async def _add_verified_tx(self, txid, height):
+    async def _get_tx_mined_info(self, height):
         header = None
         while header is None:
             await asyncio.sleep(0.1)
             async with self.network.bhi_lock:
                 header = self.network.blockchain().read_header(height)
-        tx_info = TxMinedInfo(height=height,
-                              timestamp=header.get('timestamp'),
-                              txpos=0,
-                              header_hash=hash_header(header))
-        self.adb.add_verified_tx(txid, tx_info)
+        return TxMinedInfo(height=height, timestamp=header.get('timestamp'),
+                           txpos=0, header_hash=hash_header(header))
 
     async def _check_mweb_prevout(self, prevout):
         output_id, target = [], set()
@@ -1127,12 +1124,15 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         if set(resp.output_id) == target:
             resp = await stub.Status(StatusRequest())
             height = resp.mweb_utxos_height
-            for txout in tx.outputs():
-                if self.db.is_addr_in_history(txout.address):
-                    hist = dict(self.db.get_addr_history(txout.address))
-                    hist[tx_hash] = height
-                    self.db.set_addr_history(txout.address, list(hist.items()))
-            await self._add_verified_tx(tx_hash, height)
+            tx_info = await self._get_tx_mined_info(height)
+            with self.adb.lock:
+                if self.adb.get_tx_height(tx_hash).conf: return
+                for txout in tx.outputs():
+                    if self.db.is_addr_in_history(txout.address):
+                        hist = dict(self.db.get_addr_history(txout.address))
+                        hist[tx_hash] = height
+                        self.db.set_addr_history(txout.address, list(hist.items()))
+                self.adb.add_verified_tx(tx_hash, tx_info)
 
     def _is_onchain_invoice_paid(self, invoice: Invoice) -> Tuple[bool, Optional[int], Sequence[str]]:
         """Returns whether on-chain invoice/request is satisfied, num confs required txs have,
@@ -3559,7 +3559,10 @@ class Simple_Deterministic_Wallet(Simple_Wallet, Deterministic_Wallet):
         self.adb.add_transaction(tx, allow_unrelated=True)
         self.adb.set_up_to_date(True)
         if height > 0:
-            await self.taskgroup.spawn(self._add_verified_tx, tx.txid(), height)
+            async def f():
+                tx_info = await self._get_tx_mined_info(height)
+                self.adb.add_verified_tx(tx.txid(), tx_info)
+            await self.taskgroup.spawn(f())
 
 
 
