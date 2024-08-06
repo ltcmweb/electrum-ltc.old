@@ -1126,13 +1126,15 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             height = resp.mweb_utxos_height
             tx_info = await self._get_tx_mined_info(height)
             with self.adb.lock:
-                if self.adb.get_tx_height(tx_hash).conf: return
+                tx_info2 = self.adb.get_tx_height(tx_hash)
+                if tx_info2.conf: height = tx_info2.height
                 for txout in tx.outputs():
                     if self.db.is_addr_in_history(txout.address):
                         hist = dict(self.db.get_addr_history(txout.address))
                         hist[tx_hash] = height
                         self.db.set_addr_history(txout.address, list(hist.items()))
-                self.adb.add_verified_tx(tx_hash, tx_info)
+                if not tx_info2.conf:
+                    self.adb.add_verified_tx(tx_hash, tx_info)
 
     def _is_onchain_invoice_paid(self, invoice: Invoice) -> Tuple[bool, Optional[int], Sequence[str]]:
         """Returns whether on-chain invoice/request is satisfied, num confs required txs have,
