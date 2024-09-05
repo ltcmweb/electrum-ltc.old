@@ -1341,6 +1341,16 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.utxo_list.refresh_all()
         self.utxo_list.selectionModel().clearSelection()
 
+    def coinswap(self, utxo: PartialTxInput):
+        if not self.wallet.keystore.may_have_password(): return
+        txout = PartialTxOutput(scriptpubkey=utxo.scriptpubkey, value=utxo.value_sats())
+        make_tx = lambda _: PartialTransaction.from_io([utxo], [txout])
+        conf_dlg = ConfirmTxDialog(window=self, make_tx=make_tx, output_value='!', is_sweep=False)
+        cancelled, is_send, password, _ = conf_dlg.run()
+        if cancelled or not is_send: return
+        self.wallet.add_input_info(utxo)
+        mwebd.coinswap(utxo, self.wallet.keystore, password)
+
     def create_list_tab(self, l, toolbar=None):
         w = QWidget()
         w.searchable_list = l

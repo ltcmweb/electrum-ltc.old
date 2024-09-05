@@ -112,3 +112,19 @@ class BroadcastResponse(_message.Message):
     TXID_FIELD_NUMBER: _ClassVar[int]
     txid: str
     def __init__(self, txid: _Optional[str] = ...) -> None: ...
+
+class CoinswapRequest(_message.Message):
+    __slots__ = ("scan_secret", "spend_secret", "output_id", "addr_index")
+    SCAN_SECRET_FIELD_NUMBER: _ClassVar[int]
+    SPEND_SECRET_FIELD_NUMBER: _ClassVar[int]
+    OUTPUT_ID_FIELD_NUMBER: _ClassVar[int]
+    ADDR_INDEX_FIELD_NUMBER: _ClassVar[int]
+    scan_secret: bytes
+    spend_secret: bytes
+    output_id: str
+    addr_index: int
+    def __init__(self, scan_secret: _Optional[bytes] = ..., spend_secret: _Optional[bytes] = ..., output_id: _Optional[str] = ..., addr_index: _Optional[int] = ...) -> None: ...
+
+class CoinswapResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...

@@ -49,6 +49,11 @@ class RpcStub(object):
                 request_serializer=mwebd__pb2.BroadcastRequest.SerializeToString,
                 response_deserializer=mwebd__pb2.BroadcastResponse.FromString,
                 )
+        self.Coinswap = channel.unary_unary(
+                '/Rpc/Coinswap',
+                request_serializer=mwebd__pb2.CoinswapRequest.SerializeToString,
+                response_deserializer=mwebd__pb2.CoinswapResponse.FromString,
+                )
 
 
 class RpcServicer(object):
@@ -111,6 +116,13 @@ class RpcServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Coinswap(self, request, context):
+        """Submit a coinswap request.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_RpcServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -148,6 +160,11 @@ def add_RpcServicer_to_server(servicer, server):
                     servicer.Broadcast,
                     request_deserializer=mwebd__pb2.BroadcastRequest.FromString,
                     response_serializer=mwebd__pb2.BroadcastResponse.SerializeToString,
+            ),
+            'Coinswap': grpc.unary_unary_rpc_method_handler(
+                    servicer.Coinswap,
+                    request_deserializer=mwebd__pb2.CoinswapRequest.FromString,
+                    response_serializer=mwebd__pb2.CoinswapResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -275,5 +292,22 @@ class Rpc(object):
         return grpc.experimental.unary_unary(request, target, '/Rpc/Broadcast',
             mwebd__pb2.BroadcastRequest.SerializeToString,
             mwebd__pb2.BroadcastResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Coinswap(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/Coinswap',
+            mwebd__pb2.CoinswapRequest.SerializeToString,
+            mwebd__pb2.CoinswapResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

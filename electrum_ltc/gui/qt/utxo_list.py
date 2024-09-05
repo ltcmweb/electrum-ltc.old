@@ -215,6 +215,9 @@ class UTXOList(MyTreeView):
                 menu.addAction(_("Address is frozen"), lambda: None).setEnabled(False)
                 menu.addAction(_("Unfreeze Address"), lambda: self.parent.set_frozen_state_of_addresses([addr], False))
                 menu.addSeparator()
+            # "CoinSwap"
+            if utxo.mweb_output_id:
+                menu.addAction(_("CoinSwap"), lambda: self.parent.coinswap(utxo))
         elif len(coins) > 1:  # multiple items selected
             menu.addSeparator()
             addrs = [utxo.address for utxo in coins]

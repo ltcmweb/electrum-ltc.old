@@ -10,7 +10,7 @@ from .bip32 import BIP32_PRIME
 from .bitcoin import is_mweb_address
 from . import constants
 from .transaction import PartialTransaction, Transaction, TxInput, TxOutpoint
-from .mwebd_pb2 import CreateRequest, StatusRequest
+from .mwebd_pb2 import CoinswapRequest, CreateRequest, StatusRequest
 from .mwebd_pb2_grpc import RpcStub
 
 data_dir = None
@@ -92,3 +92,12 @@ def create(tx, keystore, fee_estimator, *, dry_run = True, password = None):
             txout.mweb_output_id = resp.output_id.pop(0)
     tx2._original_tx = tx
     return tx2, fee_increase
+
+def coinswap(utxo, keystore, password):
+    if not keystore.scan_secret: return
+    if not keystore.may_have_password(): return
+    scan_secret = bytes.fromhex(keystore.scan_secret)
+    spend_secret, _ = keystore.get_private_key([BIP32_PRIME + 1], password)
+    stub().Coinswap(CoinswapRequest(
+        scan_secret=scan_secret, spend_secret=spend_secret,
+        output_id=utxo.mweb_output_id, addr_index=utxo.mweb_address_index))
