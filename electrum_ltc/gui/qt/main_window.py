@@ -37,6 +37,7 @@ import queue
 import asyncio
 from typing import Optional, TYPE_CHECKING, Sequence, List, Union, Dict, Set
 import concurrent.futures
+from grpc._channel import _InactiveRpcError
 
 from PyQt5.QtGui import QPixmap, QKeySequence, QIcon, QCursor, QFont, QFontMetrics
 from PyQt5.QtCore import Qt, QRect, QStringListModel, QSize, pyqtSignal
@@ -1349,7 +1350,11 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         cancelled, is_send, password, _ = conf_dlg.run()
         if cancelled or not is_send: return
         self.wallet.add_input_info(utxo)
-        mwebd.coinswap(utxo, self.wallet.keystore, password)
+        try:
+            mwebd.coinswap(utxo, self.wallet.keystore, password)
+            self.show_message('Request sent')
+        except _InactiveRpcError as e:
+            self.show_error(e.details().capitalize())
 
     def create_list_tab(self, l, toolbar=None):
         w = QWidget()
