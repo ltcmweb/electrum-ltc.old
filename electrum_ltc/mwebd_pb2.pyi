@@ -126,5 +126,7 @@ class CoinswapRequest(_message.Message):
     def __init__(self, scan_secret: _Optional[bytes] = ..., spend_secret: _Optional[bytes] = ..., output_id: _Optional[str] = ..., addr_index: _Optional[int] = ...) -> None: ...
 
 class CoinswapResponse(_message.Message):
-    __slots__ = ()
-    def __init__(self) -> None: ...
+    __slots__ = ("output_id",)
+    OUTPUT_ID_FIELD_NUMBER: _ClassVar[int]
+    output_id: str
+    def __init__(self, output_id: _Optional[str] = ...) -> None: ...

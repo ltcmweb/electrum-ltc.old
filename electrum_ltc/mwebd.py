@@ -98,6 +98,7 @@ def coinswap(utxo, keystore, password):
     if not keystore.may_have_password(): return
     scan_secret = bytes.fromhex(keystore.scan_secret)
     spend_secret, _ = keystore.get_private_key([BIP32_PRIME + 1], password)
-    stub().Coinswap(CoinswapRequest(
+    resp = stub().Coinswap(CoinswapRequest(
         scan_secret=scan_secret, spend_secret=spend_secret,
         output_id=utxo.mweb_output_id, addr_index=utxo.mweb_address_index))
+    return resp.output_id
