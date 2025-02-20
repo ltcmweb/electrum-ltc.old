@@ -177,6 +177,11 @@ info "copying zbar"
 cp "/usr/lib/x86_64-linux-gnu/libzbar.so.0" "$APPDIR/usr/lib/libzbar.so.0"
 
 
+info "installing mwebd."
+/usr/local/go/bin/go install github.com/ltcmweb/mwebd/cmd/mwebd@latest
+cp "$HOME/go/bin/mwebd" "$APPDIR/usr/lib/python3.9/site-packages/mwebd"
+
+
 info "desktop integration."
 cp "$PROJECT_ROOT/electrum-ltc.desktop" "$APPDIR/electrum-ltc.desktop"
 cp "$PROJECT_ROOT/electrum_ltc/gui/icons/electrum-ltc.png" "$APPDIR/electrum-ltc.png"
@@ -264,7 +269,7 @@ rm -rf "$PYDIR"/site-packages/*.dist-info/
 rm -rf "$PYDIR"/site-packages/*.egg-info/
 
 
-find -exec touch -h -d '2000-11-11T11:11:11+00:00' {} +
+#find -exec touch -h -d '2000-11-11T11:11:11+00:00' {} +
 
 
 info "creating the AppImage."
