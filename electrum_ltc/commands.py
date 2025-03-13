@@ -40,6 +40,10 @@ from decimal import Decimal
 from typing import Optional, TYPE_CHECKING, Dict, List
 import os
 
+from google.protobuf.json_format import MessageToDict
+from electrum_ltc import mwebd
+from electrum_ltc.mwebd_pb2 import StatusRequest
+
 from .import util, ecc
 from .util import (bfh, bh2u, format_satoshis, json_decode, json_normalize,
                    is_hash256_str, is_hex_str, to_bytes, parse_max_spend)
@@ -216,6 +220,11 @@ class Commands:
             'default_wallet': self.config.get_wallet_path(),
             'fee_per_kb': self.config.fee_per_kb(),
         }
+        try:
+            status = mwebd.stub().Status(StatusRequest())
+            status = MessageToDict(status, preserving_proto_field_name=True)
+            response['mwebd_status'] = status
+        except: ()
         return response
 
     @command('n')

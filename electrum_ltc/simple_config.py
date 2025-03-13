@@ -10,6 +10,7 @@ from numbers import Real
 
 from copy import deepcopy
 from aiorpcx import NetAddress
+from electrum_ltc import mwebd
 
 from . import util
 from . import constants
@@ -140,6 +141,8 @@ class SimpleConfig(Logger):
         elif self.get('signet'):
             path = os.path.join(path, 'signet')
             make_dir(path, allow_symlink=False)
+
+        mwebd.set_data_dir(path)
 
         self.logger.info(f"electrum directory {path}")
         return path
