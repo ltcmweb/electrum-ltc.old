@@ -1,22 +1,19 @@
-from contextlib import closing
 from copy import copy
+from ctypes import cdll
 import grpc
 from pathlib import Path
-import socket
-import subprocess
 from threading import RLock
 
 from .bip32 import BIP32_PRIME
 from .bitcoin import is_mweb_address
 from . import constants
 from .transaction import PartialTransaction, Transaction, TxInput, TxOutpoint
-from .mwebd_pb2 import CoinswapRequest, CreateRequest, StatusRequest
+from .mwebd_pb2 import CoinswapRequest, CreateRequest
 from .mwebd_pb2_grpc import RpcStub
 
 data_dir = None
 lock = RLock()
-port = None
-process = None
+started = False
 
 def set_data_dir(dir):
     global data_dir
@@ -25,28 +22,20 @@ def set_data_dir(dir):
         data_dir.mkdir(exist_ok=True)
 
 def start_if_needed():
-    global port, process
+    global started
     with lock:
-        if process: return
-        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-            s.bind(('127.0.0.1', 0))
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            port = s.getsockname()[1]
-        process = subprocess.Popen([Path(__file__).parent.parent.resolve() / 'mwebd',
-            '-c', constants.net.NET_NAME, '-d', data_dir, '-l', f'127.0.0.1:{port}'])
-        while True:
-            try:
-                stub().Status(StatusRequest())
-                break
-            except: ()
+        if started: return
+        chain = constants.net.NET_NAME.encode()
+        path = Path(__file__).parent.resolve() / 'libmwebd.so'
+        started = cdll[str(path)].Start(chain, str(data_dir).encode())
 
 def stub():
     start_if_needed()
-    return RpcStub(grpc.insecure_channel(f'127.0.0.1:{port}'))
+    return RpcStub(grpc.insecure_channel(f'unix://{data_dir}/mwebd.sock'))
 
 def stub_async():
     start_if_needed()
-    return RpcStub(grpc.aio.insecure_channel(f'127.0.0.1:{port}'))
+    return RpcStub(grpc.aio.insecure_channel(f'unix://{data_dir}/mwebd.sock'))
 
 def create(tx, keystore, fee_estimator, *, dry_run = True, password = None):
     scan_secret = spend_secret = bytes(32)
