@@ -42,7 +42,7 @@ RUN wget -nc https://dl.winehq.org/wine-builds/Release.key && \
         apt-key add Release.key && \
         rm Release.key && \
     wget -nc https://dl.winehq.org/wine-builds/winehq.key && \
-        echo "78b185fabdb323971d13bd329fefc8038e08559aa51c4996de18db0639a51df6 winehq.key" | sha256sum -c - && \
+        echo "d965d646defe94b3dfba6d5b4406900ac6c81065428bf9d9303ad7a72ee8d1b8 winehq.key" | sha256sum -c - && \
         apt-key add winehq.key && \
         rm winehq.key && \
     apt-add-repository https://dl.winehq.org/wine-builds/debian/ && \
@@ -58,6 +58,9 @@ RUN wget -nc https://dl.winehq.org/wine-builds/Release.key && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get autoremove -y && \
     apt-get clean
+
+RUN wget https://go.dev/dl/go1.25.1.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.25.1.linux-amd64.tar.gz
 
 # create new user to avoid using root; but with sudo access and no password for convenience.
 ENV USER="user"

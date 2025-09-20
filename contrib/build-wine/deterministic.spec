@@ -32,7 +32,7 @@ binaries += [b for b in collect_dynamic_libs('PyQt5') if 'qwindowsvista' in b[0]
 binaries += [('C:/tmp/libsecp256k1-0.dll', '.')]
 binaries += [('C:/tmp/libusb-1.0.dll', '.')]
 binaries += [('C:/tmp/libzbar-0.dll', '.')]
-binaries += [(home+'mwebd.exe', '.')]
+binaries += [('C:/tmp/libmwebd-0.dll', '.')]
 
 datas = [
     (home+'electrum_ltc/*.json', 'electrum_ltc'),

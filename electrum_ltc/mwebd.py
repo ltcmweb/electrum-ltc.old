@@ -1,12 +1,14 @@
 from copy import copy
 from ctypes import cdll
 import grpc
-from pathlib import Path
+import os
+import sys
 from threading import RLock
 
 from .bip32 import BIP32_PRIME
 from .bitcoin import is_mweb_address
 from . import constants
+from .logging import get_logger
 from .transaction import PartialTransaction, Transaction, TxInput, TxOutpoint
 from .mwebd_pb2 import CoinswapRequest, CreateRequest
 from .mwebd_pb2_grpc import RpcStub
@@ -15,19 +17,35 @@ data_dir = None
 lock = RLock()
 started = False
 
+_logger = get_logger(__name__)
+
+if sys.platform == 'darwin':
+    name = 'libmwebd.0.dylib'
+elif sys.platform in ('windows', 'win32'):
+    name = 'libmwebd-0.dll'
+else:
+    name = 'libmwebd.so.0'
+
+try:
+    libmwebd = cdll.LoadLibrary(os.path.join(os.path.dirname(__file__), name))
+except BaseException as e1:
+    try:
+        libmwebd = cdll.LoadLibrary(name)
+    except BaseException as e2:
+        libmwebd = None
+        _logger.error(f"failed to load mwebd. exceptions: {[e1,e2]!r}")
+
 def set_data_dir(dir):
     global data_dir
     with lock:
-        data_dir = Path(dir) / 'mweb'
-        data_dir.mkdir(exist_ok=True)
+        data_dir = os.path.join(dir, 'mweb')
+        os.makedirs(data_dir, exist_ok=True)
 
 def start_if_needed():
     global started
     with lock:
         if started: return
-        chain = constants.net.NET_NAME.encode()
-        path = Path(__file__).parent.resolve() / 'libmwebd.so'
-        started = cdll[str(path)].Start(chain, str(data_dir).encode())
+        started = libmwebd.Start(constants.net.NET_NAME.encode(), data_dir.encode())
 
 def stub():
     start_if_needed()

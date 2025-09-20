@@ -203,6 +203,14 @@ else
 fi
 cp -f "$DLL_TARGET_DIR/libusb-1.0.dylib" "$PROJECT_ROOT/electrum_ltc/" || fail "Could not copy libusb dylib"
 
+if [ ! -f "$DLL_TARGET_DIR/libmwebd.0.dylib" ]; then
+    info "Building mwebd dylib..."
+    GOARCH=amd64 "$CONTRIB"/make_mwebd.sh || fail "Could not build mwebd dylib"
+else
+    info "Skipping mwebd build: reusing already built dylib."
+fi
+cp -f "$DLL_TARGET_DIR/libmwebd.0.dylib" "$PROJECT_ROOT/electrum_ltc/" || fail "Could not copy mwebd dylib"
+
 
 info "Installing requirements..."
 python3 -m pip install --no-build-isolation --no-dependencies --no-binary :all: \

@@ -51,7 +51,7 @@ datas += collect_data_files('bitbox02')
 binaries = [(electrum + "electrum_ltc/libusb-1.0.dylib", ".")]
 binaries += [(electrum + "electrum_ltc/libsecp256k1.0.dylib", ".")]
 binaries += [(electrum + "electrum_ltc/libzbar.0.dylib", ".")]
-binaries += [(electrum + "mwebd", ".")]
+binaries += [(electrum + "electrum_ltc/libmwebd.0.dylib", ".")]
 
 # Workaround for "Retro Look":
 binaries += [b for b in collect_dynamic_libs('PyQt5') if 'macstyle' in b[0]]

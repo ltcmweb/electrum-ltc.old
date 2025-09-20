@@ -46,6 +46,7 @@ contrib/android/android_debug.keystore
 contrib/secp256k1/
 contrib/zbar/
 contrib/libusb/
+contrib/mwebd/dist/
 contrib/.venv_make_packages/
 
 # shared objects

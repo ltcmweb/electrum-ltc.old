@@ -178,8 +178,12 @@ cp "/usr/lib/x86_64-linux-gnu/libzbar.so.0" "$APPDIR/usr/lib/libzbar.so.0"
 
 
 info "installing mwebd."
-/usr/local/go/bin/go install github.com/ltcmweb/mwebd/cmd/mwebd@latest
-cp "$HOME/go/bin/mwebd" "$APPDIR/usr/lib/python3.9/site-packages/mwebd"
+if [ -f "$DLL_TARGET_DIR/libmwebd.so.0" ]; then
+    info "mwebd already built, skipping"
+else
+    "$CONTRIB"/make_mwebd.sh || fail "Could not build mwebd"
+fi
+cp -f "$DLL_TARGET_DIR/libmwebd.so.0" "$APPDIR/usr/lib/libmwebd.so.0" || fail "Could not copy mwebd to its destination"
 
 
 info "desktop integration."

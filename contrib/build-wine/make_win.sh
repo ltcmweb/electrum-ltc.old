@@ -83,6 +83,12 @@ else
     "$CONTRIB"/make_libusb.sh || fail "Could not build libusb"
 fi
 
+if [ -f "$DLL_TARGET_DIR/libmwebd-0.dll" ]; then
+    info "mwebd already built, skipping"
+else
+    "$CONTRIB"/make_mwebd.sh || fail "Could not build mwebd"
+fi
+
 "$here/prepare-wine.sh" || fail "prepare-wine failed"
 
 info "Resetting modification time in C:\Python..."
