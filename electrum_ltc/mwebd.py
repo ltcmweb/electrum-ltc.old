@@ -15,7 +15,7 @@ from .mwebd_pb2_grpc import RpcStub
 
 data_dir = None
 lock = RLock()
-started = False
+port = 0
 
 _logger = get_logger(__name__)
 
@@ -42,18 +42,22 @@ def set_data_dir(dir):
         os.makedirs(data_dir, exist_ok=True)
 
 def start_if_needed():
-    global started
+    global port
     with lock:
-        if started: return
-        started = libmwebd.Start(constants.net.NET_NAME.encode(), data_dir.encode())
+        if port: return
+        port = libmwebd.start(constants.net.NET_NAME.encode(), data_dir.encode())
 
 def stub():
     start_if_needed()
-    return RpcStub(grpc.insecure_channel(f'unix://{data_dir}/mwebd.sock'))
+    target = f'unix://{data_dir}/mwebd.sock'
+    if port > 1: target = f'127.0.0.1:{port}'
+    return RpcStub(grpc.insecure_channel(target))
 
 def stub_async():
     start_if_needed()
-    return RpcStub(grpc.aio.insecure_channel(f'unix://{data_dir}/mwebd.sock'))
+    target = f'unix://{data_dir}/mwebd.sock'
+    if port > 1: target = f'127.0.0.1:{port}'
+    return RpcStub(grpc.aio.insecure_channel(target))
 
 def create(tx, keystore, fee_estimator, *, dry_run = True, password = None):
     scan_secret = spend_secret = bytes(32)

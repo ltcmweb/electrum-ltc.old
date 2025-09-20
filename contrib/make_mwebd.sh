@@ -31,7 +31,7 @@ info "Building $pkgname..."
 
     mkdir -p dist
     PATH=/usr/local/go/bin:$PATH
-    CGO_ENABLED=1 go build -buildmode=c-shared -o dist/$dlname . || fail "Could not build $pkgname"
+    CGO_ENABLED=1 go build -buildmode=c-shared -ldflags="-s -w" -o dist/$dlname . || fail "Could not build $pkgname"
     cp -fpv dist/$dlname "$PROJECT_ROOT/electrum_ltc" || fail "Could not copy the $pkgname binary to its destination"
     info "$dlname has been placed in the inner 'electrum_ltc' folder."
     if [ -n "$DLL_TARGET_DIR" ] ; then

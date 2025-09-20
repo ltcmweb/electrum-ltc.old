@@ -2,12 +2,13 @@ package main
 
 import (
 	"C"
+	"runtime"
 
 	"github.com/ltcmweb/mwebd"
 )
 
-//export Start
-func Start(chain, dataDir *C.char) C.int {
+//export start
+func start(chain, dataDir *C.char) C.int {
 	args := &mwebd.ServerArgs{
 		Chain:   C.GoString(chain),
 		DataDir: C.GoString(dataDir),
@@ -16,10 +17,14 @@ func Start(chain, dataDir *C.char) C.int {
 	if err != nil {
 		return 0
 	}
-	if err = server.StartUnix(args.DataDir + "/mwebd.sock"); err != nil {
-		return 0
+	if runtime.GOOS != "windows" {
+		if server.StartUnix(args.DataDir+"/mwebd.sock") == nil {
+			return 1
+		}
+	} else if port, err := server.Start(0); err == nil {
+		return C.int(port)
 	}
-	return 1
+	return 0
 }
 
 func main() {}
