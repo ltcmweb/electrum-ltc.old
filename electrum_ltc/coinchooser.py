@@ -339,6 +339,7 @@ class CoinChooserBase(Logger):
             # note re performance: so far this was constant time
             # what follows is linear in len(buckets)
             tx, _ = tx_from_buckets(buckets)
+            tx._original_tx = None
             if len(tx.inputs()) == len(tx.outputs()) == 0:
                 return True
             return tx.input_value() >= tx.output_value() + fee_estimator_w(tx.estimated_weight())
@@ -353,7 +354,7 @@ class CoinChooserBase(Logger):
         # Choose a subset of the buckets
         scored_candidate = self.choose_buckets(all_buckets, sufficient_funds,
                                                self.penalty_func(base_tx, tx_from_buckets=tx_from_buckets))
-        tx, _ = tx_from_buckets(scored_candidate.buckets)
+        tx = scored_candidate.tx
 
         self.logger.info(f"using {len(tx.inputs())} inputs")
         self.logger.info(f"using buckets: {[bucket.desc for bucket in scored_candidate.buckets]}")
