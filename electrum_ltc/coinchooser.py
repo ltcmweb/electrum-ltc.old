@@ -302,29 +302,6 @@ class CoinChooserBase(Logger):
         def fee_estimator_w(weight):
             return fee_estimator_vb(Transaction.virtual_size_from_weight(weight))
 
-        def tx_from_buckets(buckets):
-            tx, change = self._construct_tx_from_selected_buckets(buckets=buckets,
-                base_tx=base_tx, change_addrs=change_addrs, fee_estimator_w=fee_estimator_w,
-                dust_threshold=dust_threshold, base_weight=base_weight)
-            canonical_change, txouts = [], []
-            for txout in tx.outputs():
-                if txout in change and not is_mweb_address(txout.address):
-                    canonical_change.append(txout)
-                else:
-                    txouts.append(txout)
-            tx._outputs = txouts
-            _, fee_increase = mwebd.create(tx, keystore, fee_estimator_vb)
-            sum_change = sum([x.value for x in change])
-            if fee_increase <= sum_change:
-                for txout in change:
-                    txout.value -= ceil(txout.value / sum_change * fee_increase)
-                    if txout.value < 0: txout.value = 0
-            tx, _ = mwebd.create(tx, keystore, fee_estimator_vb)
-            change_added_back = [x for x in canonical_change if x.value >= dust_threshold]
-            tx.add_outputs(change_added_back)
-            if tx._original_tx: tx._original_tx.add_outputs(change_added_back)
-            return tx, [x for x in change if x not in canonical_change or x in change_added_back]
-
         def sufficient_funds(buckets, *, bucket_value_sum):
             '''Given a list of buckets, return True if it has enough
             value to pay for the transaction'''
@@ -343,6 +320,28 @@ class CoinChooserBase(Logger):
             if len(tx.inputs()) == len(tx.outputs()) == 0:
                 return True
             return tx.input_value() >= tx.output_value() + fee_estimator_w(tx.estimated_weight())
+
+        def tx_from_buckets(buckets):
+            tx, change = _tx_from_buckets(buckets)
+            canonical_change = [x for x in change if not is_mweb_address(x.address)]
+            tx._outputs = [x for x in tx.outputs() if not any(x is y for y in canonical_change)]
+            _, fee_increase = mwebd.create(tx, keystore, fee_estimator_vb)
+            sum_change = sum([x.value for x in change])
+            for x in change: x.value -= ceil(x.value / sum_change * fee_increase)
+            tx._outputs = [x for x in tx.outputs() if x.value > 0]
+            tx2, _ = mwebd.create(tx, keystore, fee_estimator_vb)
+            change_added_back = [x for x in canonical_change if x.value >= dust_threshold]
+            tx.add_outputs(change_added_back)
+            if tx2 is not tx: tx2.add_outputs(change_added_back)
+            return tx2, [x for x in change if any(x is y for y in tx.outputs())]
+
+        def _tx_from_buckets(buckets):
+            return self._construct_tx_from_selected_buckets(buckets=buckets,
+                                                            base_tx=base_tx,
+                                                            change_addrs=change_addrs,
+                                                            fee_estimator_w=fee_estimator_w,
+                                                            dust_threshold=dust_threshold,
+                                                            base_weight=base_weight)
 
         # Collect the coins into buckets
         all_buckets = self.bucketize_coins(coins, fee_estimator_vb=fee_estimator_vb)
