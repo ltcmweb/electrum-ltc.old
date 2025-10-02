@@ -1,7 +1,7 @@
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -100,6 +100,102 @@ class CreateResponse(_message.Message):
     raw_tx: bytes
     output_id: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, raw_tx: _Optional[bytes] = ..., output_id: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class PsbtCreateRequest(_message.Message):
+    __slots__ = ("raw_tx", "witness_utxo")
+    RAW_TX_FIELD_NUMBER: _ClassVar[int]
+    WITNESS_UTXO_FIELD_NUMBER: _ClassVar[int]
+    raw_tx: bytes
+    witness_utxo: _containers.RepeatedCompositeFieldContainer[TxOut]
+    def __init__(self, raw_tx: _Optional[bytes] = ..., witness_utxo: _Optional[_Iterable[_Union[TxOut, _Mapping]]] = ...) -> None: ...
+
+class TxOut(_message.Message):
+    __slots__ = ("value", "pk_script")
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    PK_SCRIPT_FIELD_NUMBER: _ClassVar[int]
+    value: int
+    pk_script: bytes
+    def __init__(self, value: _Optional[int] = ..., pk_script: _Optional[bytes] = ...) -> None: ...
+
+class PsbtResponse(_message.Message):
+    __slots__ = ("psbt_b64",)
+    PSBT_B64_FIELD_NUMBER: _ClassVar[int]
+    psbt_b64: str
+    def __init__(self, psbt_b64: _Optional[str] = ...) -> None: ...
+
+class PsbtAddInputRequest(_message.Message):
+    __slots__ = ("psbt_b64", "scan_secret", "output_id", "address_index")
+    PSBT_B64_FIELD_NUMBER: _ClassVar[int]
+    SCAN_SECRET_FIELD_NUMBER: _ClassVar[int]
+    OUTPUT_ID_FIELD_NUMBER: _ClassVar[int]
+    ADDRESS_INDEX_FIELD_NUMBER: _ClassVar[int]
+    psbt_b64: str
+    scan_secret: bytes
+    output_id: str
+    address_index: int
+    def __init__(self, psbt_b64: _Optional[str] = ..., scan_secret: _Optional[bytes] = ..., output_id: _Optional[str] = ..., address_index: _Optional[int] = ...) -> None: ...
+
+class PsbtAddRecipientRequest(_message.Message):
+    __slots__ = ("psbt_b64", "recipient", "fee_rate_per_kb")
+    PSBT_B64_FIELD_NUMBER: _ClassVar[int]
+    RECIPIENT_FIELD_NUMBER: _ClassVar[int]
+    FEE_RATE_PER_KB_FIELD_NUMBER: _ClassVar[int]
+    psbt_b64: str
+    recipient: PsbtRecipient
+    fee_rate_per_kb: int
+    def __init__(self, psbt_b64: _Optional[str] = ..., recipient: _Optional[_Union[PsbtRecipient, _Mapping]] = ..., fee_rate_per_kb: _Optional[int] = ...) -> None: ...
+
+class PsbtGetRecipientsRequest(_message.Message):
+    __slots__ = ("psbt_b64",)
+    PSBT_B64_FIELD_NUMBER: _ClassVar[int]
+    psbt_b64: str
+    def __init__(self, psbt_b64: _Optional[str] = ...) -> None: ...
+
+class PsbtGetRecipientsResponse(_message.Message):
+    __slots__ = ("recipient", "input_address", "fee")
+    RECIPIENT_FIELD_NUMBER: _ClassVar[int]
+    INPUT_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    FEE_FIELD_NUMBER: _ClassVar[int]
+    recipient: _containers.RepeatedCompositeFieldContainer[PsbtRecipient]
+    input_address: _containers.RepeatedScalarFieldContainer[str]
+    fee: int
+    def __init__(self, recipient: _Optional[_Iterable[_Union[PsbtRecipient, _Mapping]]] = ..., input_address: _Optional[_Iterable[str]] = ..., fee: _Optional[int] = ...) -> None: ...
+
+class PsbtRecipient(_message.Message):
+    __slots__ = ("address", "value")
+    ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    address: str
+    value: int
+    def __init__(self, address: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
+
+class PsbtSignRequest(_message.Message):
+    __slots__ = ("psbt_b64", "scan_secret", "spend_secret")
+    PSBT_B64_FIELD_NUMBER: _ClassVar[int]
+    SCAN_SECRET_FIELD_NUMBER: _ClassVar[int]
+    SPEND_SECRET_FIELD_NUMBER: _ClassVar[int]
+    psbt_b64: str
+    scan_secret: bytes
+    spend_secret: bytes
+    def __init__(self, psbt_b64: _Optional[str] = ..., scan_secret: _Optional[bytes] = ..., spend_secret: _Optional[bytes] = ...) -> None: ...
+
+class PsbtSignNonMwebRequest(_message.Message):
+    __slots__ = ("psbt_b64", "priv_key", "index")
+    PSBT_B64_FIELD_NUMBER: _ClassVar[int]
+    PRIV_KEY_FIELD_NUMBER: _ClassVar[int]
+    INDEX_FIELD_NUMBER: _ClassVar[int]
+    psbt_b64: str
+    priv_key: bytes
+    index: int
+    def __init__(self, psbt_b64: _Optional[str] = ..., priv_key: _Optional[bytes] = ..., index: _Optional[int] = ...) -> None: ...
+
+class PsbtExtractRequest(_message.Message):
+    __slots__ = ("psbt_b64", "unsigned")
+    PSBT_B64_FIELD_NUMBER: _ClassVar[int]
+    UNSIGNED_FIELD_NUMBER: _ClassVar[int]
+    psbt_b64: str
+    unsigned: bool
+    def __init__(self, psbt_b64: _Optional[str] = ..., unsigned: bool = ...) -> None: ...
 
 class BroadcastRequest(_message.Message):
     __slots__ = ("raw_tx",)

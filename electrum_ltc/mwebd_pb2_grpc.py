@@ -39,6 +39,41 @@ class RpcStub(object):
                 request_serializer=mwebd__pb2.CreateRequest.SerializeToString,
                 response_deserializer=mwebd__pb2.CreateResponse.FromString,
                 )
+        self.PsbtCreate = channel.unary_unary(
+                '/Rpc/PsbtCreate',
+                request_serializer=mwebd__pb2.PsbtCreateRequest.SerializeToString,
+                response_deserializer=mwebd__pb2.PsbtResponse.FromString,
+                )
+        self.PsbtAddInput = channel.unary_unary(
+                '/Rpc/PsbtAddInput',
+                request_serializer=mwebd__pb2.PsbtAddInputRequest.SerializeToString,
+                response_deserializer=mwebd__pb2.PsbtResponse.FromString,
+                )
+        self.PsbtAddRecipient = channel.unary_unary(
+                '/Rpc/PsbtAddRecipient',
+                request_serializer=mwebd__pb2.PsbtAddRecipientRequest.SerializeToString,
+                response_deserializer=mwebd__pb2.PsbtResponse.FromString,
+                )
+        self.PsbtGetRecipients = channel.unary_unary(
+                '/Rpc/PsbtGetRecipients',
+                request_serializer=mwebd__pb2.PsbtGetRecipientsRequest.SerializeToString,
+                response_deserializer=mwebd__pb2.PsbtGetRecipientsResponse.FromString,
+                )
+        self.PsbtSign = channel.unary_unary(
+                '/Rpc/PsbtSign',
+                request_serializer=mwebd__pb2.PsbtSignRequest.SerializeToString,
+                response_deserializer=mwebd__pb2.PsbtResponse.FromString,
+                )
+        self.PsbtSignNonMweb = channel.unary_unary(
+                '/Rpc/PsbtSignNonMweb',
+                request_serializer=mwebd__pb2.PsbtSignNonMwebRequest.SerializeToString,
+                response_deserializer=mwebd__pb2.PsbtResponse.FromString,
+                )
+        self.PsbtExtract = channel.unary_unary(
+                '/Rpc/PsbtExtract',
+                request_serializer=mwebd__pb2.PsbtExtractRequest.SerializeToString,
+                response_deserializer=mwebd__pb2.CreateResponse.FromString,
+                )
         self.LedgerExchange = channel.unary_unary(
                 '/Rpc/LedgerExchange',
                 request_serializer=mwebd__pb2.LedgerApdu.SerializeToString,
@@ -101,6 +136,55 @@ class RpcServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PsbtCreate(self, request, context):
+        """Create a PSBT from a raw transaction.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PsbtAddInput(self, request, context):
+        """Add a MWEB input to a PSBT.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PsbtAddRecipient(self, request, context):
+        """Add a recipient to a PSBT.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PsbtGetRecipients(self, request, context):
+        """Get the recipients of a PSBT.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PsbtSign(self, request, context):
+        """Sign the MWEB portion of a PSBT.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PsbtSignNonMweb(self, request, context):
+        """Sign a non-MWEB input of a PSBT.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PsbtExtract(self, request, context):
+        """Extract the raw transaction from a signed PSBT.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def LedgerExchange(self, request, context):
         """Process APDUs from the Ledger.
         """
@@ -149,6 +233,41 @@ def add_RpcServicer_to_server(servicer, server):
             'Create': grpc.unary_unary_rpc_method_handler(
                     servicer.Create,
                     request_deserializer=mwebd__pb2.CreateRequest.FromString,
+                    response_serializer=mwebd__pb2.CreateResponse.SerializeToString,
+            ),
+            'PsbtCreate': grpc.unary_unary_rpc_method_handler(
+                    servicer.PsbtCreate,
+                    request_deserializer=mwebd__pb2.PsbtCreateRequest.FromString,
+                    response_serializer=mwebd__pb2.PsbtResponse.SerializeToString,
+            ),
+            'PsbtAddInput': grpc.unary_unary_rpc_method_handler(
+                    servicer.PsbtAddInput,
+                    request_deserializer=mwebd__pb2.PsbtAddInputRequest.FromString,
+                    response_serializer=mwebd__pb2.PsbtResponse.SerializeToString,
+            ),
+            'PsbtAddRecipient': grpc.unary_unary_rpc_method_handler(
+                    servicer.PsbtAddRecipient,
+                    request_deserializer=mwebd__pb2.PsbtAddRecipientRequest.FromString,
+                    response_serializer=mwebd__pb2.PsbtResponse.SerializeToString,
+            ),
+            'PsbtGetRecipients': grpc.unary_unary_rpc_method_handler(
+                    servicer.PsbtGetRecipients,
+                    request_deserializer=mwebd__pb2.PsbtGetRecipientsRequest.FromString,
+                    response_serializer=mwebd__pb2.PsbtGetRecipientsResponse.SerializeToString,
+            ),
+            'PsbtSign': grpc.unary_unary_rpc_method_handler(
+                    servicer.PsbtSign,
+                    request_deserializer=mwebd__pb2.PsbtSignRequest.FromString,
+                    response_serializer=mwebd__pb2.PsbtResponse.SerializeToString,
+            ),
+            'PsbtSignNonMweb': grpc.unary_unary_rpc_method_handler(
+                    servicer.PsbtSignNonMweb,
+                    request_deserializer=mwebd__pb2.PsbtSignNonMwebRequest.FromString,
+                    response_serializer=mwebd__pb2.PsbtResponse.SerializeToString,
+            ),
+            'PsbtExtract': grpc.unary_unary_rpc_method_handler(
+                    servicer.PsbtExtract,
+                    request_deserializer=mwebd__pb2.PsbtExtractRequest.FromString,
                     response_serializer=mwebd__pb2.CreateResponse.SerializeToString,
             ),
             'LedgerExchange': grpc.unary_unary_rpc_method_handler(
@@ -257,6 +376,125 @@ class Rpc(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/Rpc/Create',
             mwebd__pb2.CreateRequest.SerializeToString,
+            mwebd__pb2.CreateResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PsbtCreate(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/PsbtCreate',
+            mwebd__pb2.PsbtCreateRequest.SerializeToString,
+            mwebd__pb2.PsbtResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PsbtAddInput(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/PsbtAddInput',
+            mwebd__pb2.PsbtAddInputRequest.SerializeToString,
+            mwebd__pb2.PsbtResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PsbtAddRecipient(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/PsbtAddRecipient',
+            mwebd__pb2.PsbtAddRecipientRequest.SerializeToString,
+            mwebd__pb2.PsbtResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PsbtGetRecipients(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/PsbtGetRecipients',
+            mwebd__pb2.PsbtGetRecipientsRequest.SerializeToString,
+            mwebd__pb2.PsbtGetRecipientsResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PsbtSign(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/PsbtSign',
+            mwebd__pb2.PsbtSignRequest.SerializeToString,
+            mwebd__pb2.PsbtResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PsbtSignNonMweb(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/PsbtSignNonMweb',
+            mwebd__pb2.PsbtSignNonMwebRequest.SerializeToString,
+            mwebd__pb2.PsbtResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PsbtExtract(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Rpc/PsbtExtract',
+            mwebd__pb2.PsbtExtractRequest.SerializeToString,
             mwebd__pb2.CreateResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
