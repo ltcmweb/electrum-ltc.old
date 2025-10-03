@@ -316,10 +316,11 @@ class CoinChooserBase(Logger):
             # note re performance: so far this was constant time
             # what follows is linear in len(buckets)
             tx, _ = tx_from_buckets(buckets)
-            tx._original_tx = None
-            if len(tx.inputs()) == len(tx.outputs()) == 0:
-                return True
-            return tx.input_value() >= tx.output_value() + fee_estimator_w(tx.estimated_weight())
+            fee = fee_estimator_w(tx.estimated_weight())
+            if tx._original_tx is not None:
+                tx._original_tx = None
+                fee = fee + fee_estimator_vb(41) if tx.inputs() else 0
+            return tx.input_value() >= tx.output_value() + fee
 
         def tx_from_buckets(buckets):
             tx, change = _tx_from_buckets(buckets)

@@ -1708,26 +1708,27 @@ class Abstract_Wallet(ABC, Logger, EventListener):
                 outputs[i].value = 0
             tx = PartialTransaction.from_io(list(coins), list(outputs))
             fee = fee_estimator(tx.estimated_size())
-            amount = sendable - tx.output_value() - fee
+            amount = sendable - tx.output_value()
 
-            def set_output_values():
-                if amount < 0:
-                    raise NotEnoughFunds()
-                distr_amount = 0
-                for (weight, i) in i_max:
-                    val = int((amount/i_max_sum) * weight)
-                    outputs[i].value = val
-                    distr_amount += val
+        def make_tx():
+            if amount < 0:
+                raise NotEnoughFunds()
+            distr_amount = 0
+            for (weight, i) in i_max:
+                val = int((amount/i_max_sum) * weight)
+                outputs[i].value = val
+                distr_amount += val
 
-                (x,i) = i_max[-1]
-                outputs[i].value += (amount - distr_amount)
-                return PartialTransaction.from_io(list(coins), list(outputs))
+            (x,i) = i_max[-1]
+            outputs[i].value += (amount - distr_amount)
+            tx = PartialTransaction.from_io(list(coins), list(outputs))
+            return tx
 
-            tx = set_output_values()
-            _, fee_increase = mwebd.create(tx, self.keystore, fee_estimator)
+        if i_max:
+            tx, fee_increase = mwebd.create(make_tx(), self.keystore, fee_estimator)
             amount -= fee_increase
-            tx = set_output_values()
-            tx, _ = mwebd.create(tx, self.keystore, fee_estimator)
+            if tx.inputs(): amount -= fee_estimator(tx.estimated_size())
+            tx, _ = mwebd.create(make_tx(), self.keystore, fee_estimator)
 
         # Timelock tx to current height.
         tx.locktime = get_locktime_for_new_transaction(self.network)
