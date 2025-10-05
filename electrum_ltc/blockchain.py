@@ -26,19 +26,13 @@ import time
 from typing import Optional, Dict, Mapping, Sequence
 
 from . import util
-from .bitcoin import hash_encode, int_to_hex, rev_hex
+from .bitcoin import hash_decode, hash_encode, int_to_hex, rev_hex
 from .crypto import sha256d
 from . import constants
 from .util import bfh, bh2u, with_lock
 from .simple_config import SimpleConfig
 from .logging import get_logger, Logger
-
-try:
-    import scrypt
-    getPoWHash = lambda x: scrypt.hash(x, x, N=1024, r=1, p=1, buflen=32)
-except ImportError:
-    util.print_msg("Warning: package scrypt not available; synchronization could be very slow")
-    from .scrypt import scrypt_1024_1_1_80 as getPoWHash
+from .mwebd import scrypt
 
 
 _logger = get_logger(__name__)
@@ -92,7 +86,7 @@ def hash_raw_header(header: str) -> str:
     return hash_encode(sha256d(bfh(header)))
 
 def pow_hash_header(header):
-    return hash_encode(getPoWHash(bfh(serialize_header(header))))
+    return hash_decode(scrypt(serialize_header(header))).hex()
 
 
 # key: blockhash hex at forkpoint

@@ -1,5 +1,5 @@
 from copy import copy
-from ctypes import cdll
+from ctypes import *
 import grpc
 import os
 import sys
@@ -35,6 +35,20 @@ except BaseException as e1:
         libmwebd = None
         _logger.error(f"failed to load mwebd. exceptions: {[e1,e2]!r}")
 
+class strgo(Structure):
+    _fields_ = [('p', c_char_p), ('n', c_int)]
+    def __init__(self, s):
+        self.b = s.encode()
+        self.p = c_char_p(self.b)
+        self.n = len(self.b)
+
+def scrypt(hex):
+    libmwebd.Scrypt.restype = POINTER(c_char)
+    res1 = libmwebd.Scrypt(strgo(hex))
+    res2 = string_at(res1).decode()
+    libmwebd.Free(res1)
+    return res2
+
 def set_data_dir(dir):
     global data_dir
     with lock:
@@ -45,7 +59,7 @@ def start_if_needed():
     global port
     with lock:
         if port: return
-        port = libmwebd.start(constants.net.NET_NAME.encode(), data_dir.encode())
+        port = libmwebd.Start(strgo(constants.net.NET_NAME), strgo(data_dir))
 
 def stub():
     start_if_needed()
